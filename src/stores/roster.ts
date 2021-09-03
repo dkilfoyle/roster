@@ -6,5 +6,5 @@ export interface RosterEntry {
 }
 
 export const roster: Array<RosterEntry> = [
-  { date: new Date('2021-10-05'), time: 'AM', activity: 'EMG', smo: 'DK' },
+  { date: new Date('2021-10-05'), time: 'AM', activity: 'Neuro', smo: 'DK' },
 ];
