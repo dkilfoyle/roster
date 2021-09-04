@@ -34,7 +34,7 @@ export const activities: Array<ActivityDefinition> = [
     name: 'DSR',
     description: 'Daystay Reviews',
     AM: 'every weekday',
-    PM: 'every weekday',
+    PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perDay: 2,
     perSession: 1,
   },

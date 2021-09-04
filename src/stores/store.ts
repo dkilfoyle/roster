@@ -2,32 +2,43 @@ import { defineStore } from 'pinia';
 import { roster } from './roster';
 import { smos } from './smos';
 import { activities } from './activities';
-import { addDays, eachDayOfInterval, isSameDay } from 'date-fns';
+import {
+  addDays,
+  eachDayOfInterval,
+  isSameDay,
+  isWeekend,
+  // subDays,
+} from 'date-fns';
 import { RRule } from 'rrule';
 
-type Time = 'AM' | 'PM';
+export type Time = 'AM' | 'PM';
 
 export const useStore = defineStore('main', {
   state: () => ({
-    startDate: new Date('2021-10-4'),
+    startDate: new Date('2021-08-02'),
     numWeeks: 4,
+    showWeekend: false,
     roster,
     smos,
     activities,
   }),
   getters: {
-    endDate: (state) => addDays(state.startDate, state.numWeeks * 7),
+    endDate: (state) => addDays(state.startDate, state.numWeeks * 7 - 1),
     dates(state): Array<Date> {
       return eachDayOfInterval({
         start: state.startDate,
         end: this.endDate,
-      });
+      }).filter((date) => state.showWeekend || !isWeekend(date));
     },
     activityNames: (state) => state.activities.map((activity) => activity.name),
   },
   actions: {
     setStartDate(date: Date) {
       this.startDate = date;
+      this.compileActivities();
+    },
+    setNumWeeks(x: number) {
+      this.numWeeks = x;
       this.compileActivities();
     },
     compileActivities() {
@@ -51,29 +62,29 @@ export const useStore = defineStore('main', {
       return activity;
     },
     getAssignedSMOs(date: Date, time: Time, activityName: string) {
-      const found = this.roster.filter(
+      return this.roster.filter(
         (entry) =>
           isSameDay(entry.date, date) &&
           entry.time == time &&
           entry.activity == activityName
       );
-      return found.map((entry) => entry.smo).join(',');
     },
-    getValidSMOs(date: Date, activity: string) {
-      return this.smos.filter(
-        (smo) =>
-          smo.endDate &&
-          date <= smo.endDate &&
-          smo.activities.includes(activity)
-      );
+    getAllowedSMOs(date: Date, activityName: string) {
+      return this.smos.filter((smo) => {
+        if (smo.endDate && date > smo.endDate) return false;
+        return smo.activities.includes(activityName);
+      });
     },
     parseRRule(rule: string) {
-      return RRule.fromText(rule).between(this.startDate, this.endDate, true);
+      const r = RRule.fromText(rule);
+      r.options.dtstart = new Date('2010-01-01');
+      return r.between(this.startDate, this.endDate, true);
+      // .map((date) => subDays(date, 1));
     },
     /**
      * Is activity allowed at this date and time
      */
-    isActivityAllowed(date: Date, time: Time, activityName: string) {
+    isAllowedActivity(date: Date, time: Time, activityName: string) {
       const activity = this.getActivity(activityName);
       if (!activity.validDates) throw new Error('activities are not compiled');
       return activity.validDates[time].some((activityDate) =>
@@ -93,7 +104,7 @@ export const useStore = defineStore('main', {
         (entry) => entry.time == time
       );
 
-      const isAllowedActivity = this.isActivityAllowed(
+      const isAllowedActivity = this.isAllowedActivity(
         date,
         time,
         activityName
@@ -143,7 +154,7 @@ export const useStore = defineStore('main', {
       }
 
       result.answer = result.reasons.length == 0;
-      console.log(date, time, activityName, result);
+      // console.log(date, time, activityName, result);
       return result;
     },
   },

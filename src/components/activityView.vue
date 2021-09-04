@@ -21,42 +21,24 @@
         <tr :class="`row-${i % 2}`">
           <td>{{ activity.name }}</td>
           <td>AM</td>
-          <td
-            v-for="(date, i) in store.dates"
-            :key="i"
-            :class="[
-              `day-${format(date, 'ccc')}`,
-              {
-                invalid: !store.isValidActivity(date, 'AM', activity.name)
-                  .answer,
-              },
-            ]"
-          >
-            {{
-              store.getAssignedSMOs(date, 'AM', activity.name) ||
-              (store.isActivityAllowed(date, 'AM', activity.name) ? '?' : '-')
-            }}
-          </td>
+          <activity-cell
+            v-for="date in store.dates"
+            :key="date"
+            :dateStr="date.toDateString()"
+            time="AM"
+            :activityName="activity.name"
+          ></activity-cell>
         </tr>
         <tr :class="`row-${i % 2} pm-row`">
           <td></td>
           <td>PM</td>
-          <td
-            v-for="(date, i) in store.dates"
-            :key="i"
-            :class="[
-              `day-${format(date, 'ccc')}`,
-              {
-                invalid: !store.isValidActivity(date, 'PM', activity.name)
-                  .answer,
-              },
-            ]"
-          >
-            {{
-              store.getAssignedSMOs(date, 'PM', activity.name) ||
-              (store.isActivityAllowed(date, 'PM', activity.name) ? '?' : '-')
-            }}
-          </td>
+          <activity-cell
+            v-for="date in store.dates"
+            :key="date"
+            :dateStr="date.toDateString()"
+            time="PM"
+            :activityName="activity.name"
+          ></activity-cell>
         </tr>
       </template>
     </tbody>
@@ -67,13 +49,15 @@
 import { defineComponent } from 'vue';
 import { useStore } from '../stores/store';
 
+import activityCell from './activityCell.vue';
 import { format } from 'date-fns';
 
 export default defineComponent({
   // name: 'ComponentName'
+  components: { activityCell },
   setup() {
     const store = useStore();
-    store.setStartDate(new Date('2021-10-4'));
+    store.setStartDate(new Date('2021-08-02'));
 
     return {
       store,
@@ -92,16 +76,20 @@ export default defineComponent({
   border-bottom: 2px solid black;
 }
 
-td.day-Sat {
-  border-left: 1px solid black;
-}
-
-td.day-Sun {
-  border-right: 1px solid black;
+td.weekBoundary {
+  border-right: 2px solid black;
 }
 
 td.invalid {
   background: rgb(211, 0, 0, 0.3);
+}
+
+td.week-0 {
+  background: lightgreen;
+}
+
+td.week-1 {
+  background: white;
 }
 
 .pm-row th {
