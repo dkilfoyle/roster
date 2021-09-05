@@ -52,20 +52,50 @@ export const useStore = defineStore('main', {
     setStartDate(date: Date) {
       this.startDate = date;
       this.compileActivities();
+      this.compileSMOs();
     },
     setNumWeeks(x: number) {
       this.numWeeks = x;
       this.compileActivities();
+      this.compileSMOs();
     },
     compileActivities() {
       this.activities.forEach((activity) => {
-        activity.validDates = {
+        activity.allowedDates = {
           AM: this.parseRRule(activity.AM),
           PM: this.parseRRule(activity.PM),
         };
       });
     },
     compileSMOs() {
+      this.smos.forEach((smo) => {
+        smo.allowedDates = {
+          AM: [...this.dates],
+          PM: [...this.dates],
+        };
+        smo.NCT.forEach((nct) => {
+          const amNCTDates = this.parseRRule(nct.AM);
+          const pmNCTDates = this.parseRRule(nct.PM);
+
+          // remove each NCT date from allowedDates
+          amNCTDates.forEach((amNCTDate) => {
+            const index = smo.allowedDates?.AM.findIndex((date) =>
+              isSameDay(date, amNCTDate)
+            );
+            if (typeof index != 'undefined' && index > -1)
+              smo.allowedDates?.AM.splice(index, 1);
+          });
+          pmNCTDates.forEach((pmNCTDate) => {
+            const index = smo.allowedDates?.PM.findIndex((date) =>
+              isSameDay(date, pmNCTDate)
+            );
+            if (typeof index != 'undefined' && index > -1)
+              smo.allowedDates?.PM.splice(index, 1);
+          });
+        });
+      });
+    },
+    generateNCT() {
       // run only when creating new month otherwise
       console.log(
         'Warning: compile SMOs will reset any existing NCT times back to NCT default'
@@ -143,8 +173,9 @@ export const useStore = defineStore('main', {
      */
     isAllowedActivity(date: Date, time: Time, activityName: string) {
       const activity = this.getActivity(activityName);
-      if (!activity.validDates) throw new Error('activities are not compiled');
-      return activity.validDates[time].some((activityDate) =>
+      if (!activity.allowedDates)
+        throw new Error('activities are not compiled');
+      return activity.allowedDates[time].some((activityDate) =>
         isSameDay(activityDate, date)
       );
     },
@@ -189,12 +220,12 @@ export const useStore = defineStore('main', {
         const minMax = getMinMax(activity.perSession);
         if (foundTimeMatches.length < minMax[0]) {
           result.reasons.push(
-            `PerSession: expected > ${minMax[0]}, found ${foundTimeMatches.length}`
+            `PerSession: expected >= ${minMax[0]}, found ${foundTimeMatches.length}`
           );
         }
         if (foundTimeMatches.length > minMax[1]) {
           result.reasons.push(
-            `PerDay: expected < ${minMax[1]}, found ${foundTimeMatches.length}`
+            `PerDay: expected <= ${minMax[1]}, found ${foundTimeMatches.length}`
           );
         }
       }
@@ -203,12 +234,12 @@ export const useStore = defineStore('main', {
         const minMax = getMinMax(activity.perDay);
         if (foundDateMatches.length < minMax[0]) {
           result.reasons.push(
-            `PerDay: expected > ${minMax[0]}, found ${foundDateMatches.length}`
+            `PerDay: expected >= ${minMax[0]}, found ${foundDateMatches.length}`
           );
         }
         if (foundDateMatches.length > minMax[1]) {
           result.reasons.push(
-            `PerDay: expected < ${minMax[1]}, found ${foundDateMatches.length}`
+            `PerDay: expected <= ${minMax[1]}, found ${foundDateMatches.length}`
           );
         }
       }
@@ -234,6 +265,16 @@ export const useStore = defineStore('main', {
     },
 
     /**
+     * Is SMO allowed to be scheduled this date and time
+     */
+    isAllowedSMO(date: Date, time: Time, smoName: string) {
+      const smo = this.getSMO(smoName);
+      if (!smo.allowedDates)
+        throw new Error('allowed smo dates are not compiled');
+      return smo.allowedDates[time].some((smoDate) => isSameDay(smoDate, date));
+    },
+
+    /**
      * Is smo valid at this date time - allowed to be scheduled, not already scheduled elsewhere
      */
     isValidSMO(date: Date, time: Time, smoName: string) {
@@ -256,9 +297,18 @@ export const useStore = defineStore('main', {
             .join(',')}`
         );
       } else if (assignedActivities.length == 0) {
-        result.reasons.push(`${smoName} awaiting assignment}`);
+        if (this.isAllowedSMO(date, time, smoName))
+          result.reasons.push(`${smoName} awaiting assignment`);
       } else {
         // foundTimeMatches.length == 1
+        const activityName = assignedActivities[0].activity;
+        if (
+          !this.isAllowedSMO(date, time, smoName) &&
+          !['NCT', 'WDHB', 'CDHB', 'UNI'].includes(activityName)
+        ) {
+          result.reasons.push(`${smoName} is not contracted`);
+        }
+
         if (
           !this.getAllowedActivities(smoName).includes(
             assignedActivities[0].activity

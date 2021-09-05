@@ -3,7 +3,7 @@ export interface ActivityDefinition {
   description?: string;
   AM: string;
   PM: string;
-  validDates?: { AM: Array<Date>; PM: Array<Date> };
+  allowedDates?: { AM: Array<Date>; PM: Array<Date> };
   perDay?: [number, number] | number;
   perSession?: [number, number] | number;
 }
@@ -20,6 +20,21 @@ export const activities: Array<ActivityDefinition> = [
     description: 'CME Leave',
     AM: 'every weekday',
     PM: 'every weekday',
+  },
+  {
+    name: 'Call',
+    description: 'On Call',
+    AM: 'every day',
+    PM: 'every week on Friday, Saturday, Sunday',
+    perSession: 1,
+  },
+  {
+    name: 'RT',
+    description: 'Recovery time',
+    AM: 'every weekday',
+    PM: '',
+    perSession: [0, 1],
+    perDay: 1,
   },
   {
     name: 'Neuro',
@@ -48,6 +63,14 @@ export const activities: Array<ActivityDefinition> = [
     AM: 'every weekday',
     PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perDay: 2,
+    perSession: 1,
+  },
+  {
+    name: 'TNP',
+    description: 'Triage, ncFSA, Phone',
+    AM: 'every weekday',
+    PM: '',
+    perDay: 1,
     perSession: 1,
   },
   {
@@ -84,21 +107,6 @@ export const activities: Array<ActivityDefinition> = [
     AM: 'every week on Monday, Wednesday, Thursday',
     PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perSession: [0, 2],
-  },
-  {
-    name: 'Call',
-    description: 'On Call',
-    AM: 'every day',
-    PM: 'every week on Friday, Saturday, Sunday',
-    perSession: 1,
-  },
-  {
-    name: 'RT',
-    description: 'Recovery time',
-    AM: 'every weekday',
-    PM: 'every weekday',
-    perSession: [0, 1],
-    perDay: 1,
   },
   {
     name: 'EMG',

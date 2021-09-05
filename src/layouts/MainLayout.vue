@@ -2,22 +2,26 @@
   <q-layout view="lHh Lpr lFf">
     <q-header elevated>
       <q-toolbar>
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          @click="toggleLeftDrawer"
-        />
+        <div class="col row items-center">
+          <q-btn
+            flat
+            dense
+            round
+            icon="menu"
+            aria-label="Menu"
+            @click="toggleLeftDrawer"
+          />
 
-        <q-separator dark vertical inset />
+          <q-separator dark vertical inset />
 
-        <q-toolbar-title>Neurology Roster </q-toolbar-title>
+          <div style="padding-left: 10px; font-size: 18px">
+            Neurology Roster
+          </div>
+        </div>
 
-        <div class="text-center">{{ store.monthName }}</div>
+        <div class="col" style="text-align: center">{{ store.monthName }}</div>
 
-        <q-tabs align="right">
+        <q-tabs class="col-auto">
           <q-route-tab to="/activityPage" label="Activity View" />
           <q-route-tab to="/smoPage" label="SMO View" />
         </q-tabs>

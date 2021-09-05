@@ -66,8 +66,11 @@ export default defineComponent({
 
     const tdContent = computed(() => {
       const activities = assignedActivities.value;
-      if (activities.length == 0) return '?';
-      else if (activities.length == 1) return activities[0].activity;
+      if (activities.length == 0) {
+        if (store.isAllowedSMO(date.value, time.value, smoName.value))
+          return '?';
+        else return '';
+      } else if (activities.length == 1) return activities[0].activity;
       else return activities.length;
     });
 
@@ -86,9 +89,11 @@ export default defineComponent({
         },
         { invalid: !isValidSMO.value.answer },
         {
-          nct: ['WDHB', 'NCT', 'UNI', 'CMDHB', 'A+T'].includes(
-            assignedActivities.value[0].activity
-          ),
+          nct:
+            assignedActivities.value.length &&
+            ['WDHB', 'NCT', 'UNI', 'CDHB', 'A+T'].includes(
+              assignedActivities.value[0].activity
+            ),
         },
         // `week-${Math.floor(differenceInDays(date, store.startDate) / 7) % 2}`,
       ];
