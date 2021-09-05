@@ -10,6 +10,18 @@ export interface ActivityDefinition {
 
 export const activities: Array<ActivityDefinition> = [
   {
+    name: 'ANL',
+    description: 'Annual Leave',
+    AM: 'every weekday',
+    PM: 'every weekday',
+  },
+  {
+    name: 'CME',
+    description: 'CME Leave',
+    AM: 'every weekday',
+    PM: 'every weekday',
+  },
+  {
     name: 'Neuro',
     description: 'Neurology Ward',
     AM: 'every weekday',
@@ -63,7 +75,7 @@ export const activities: Array<ActivityDefinition> = [
     name: 'DSC',
     description: 'Daystay Clinic',
     AM: 'every weekday',
-    PM: '',
+    PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perSession: [0, 2],
   },
   {
@@ -79,5 +91,34 @@ export const activities: Array<ActivityDefinition> = [
     AM: 'every day',
     PM: 'every week on Friday, Saturday, Sunday',
     perSession: 1,
+  },
+  {
+    name: 'RT',
+    description: 'Recovery time',
+    AM: 'every weekday',
+    PM: 'every weekday',
+    perSession: [0, 1],
+    perDay: 1,
+  },
+  {
+    name: 'EMG',
+    description: 'EMG',
+    AM: 'every day',
+    PM: 'every week on Monday, Tuesday, Wednesday, Friday',
+    perSession: [0, 2],
+  },
+  {
+    name: 'EEG',
+    description: 'EEG',
+    AM: 'every day',
+    PM: 'every week on Monday, Tuesday, Wednesday, Friday',
+    perSession: [0, 1],
+  },
+  {
+    name: 'BTX',
+    description: 'Botox',
+    AM: 'every day',
+    PM: 'every week on Monday, Tuesday, Wednesday, Friday',
+    perSession: [0, 3],
   },
 ];

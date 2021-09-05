@@ -7,24 +7,17 @@ export interface SMODefinition {
   NCT: Array<ActivityDefinition>;
 }
 
-const clinics = ['DSR', 'DSC', 'OPC', 'FSC'];
+const clinics = ['DSR', 'DSC', 'OPC', 'TNP', 'ncFSA', 'FSC', 'SPC'];
 const wards = ['Neuro', 'Stroke'];
-const hr = ['AL', 'CME', 'SD', 'NCT'];
+const hr = ['ANL', 'CME', 'SD', 'NCT'];
+const call = ['Call', 'RT'];
+const full = [...clinics, ...wards, ...hr, 'CRS', 'ACT', 'ADM'];
 
 export const smos: Array<SMODefinition> = [
   {
     name: 'DK',
     endDate: null,
-    activities: [
-      ...hr,
-      ...wards,
-      ...clinics,
-      'ACT',
-      'EMG',
-      'WDHB',
-      'Call',
-      'ADM',
-    ],
+    activities: [...full, ...call, 'EMG', 'WDHB'],
     NCT: [
       {
         name: 'WDHB',
@@ -41,7 +34,7 @@ export const smos: Array<SMODefinition> = [
   {
     name: 'NA',
     endDate: null,
-    activities: [...hr, ...wards, ...clinics, 'ACT', 'MMH', 'ADM'],
+    activities: [...full, ...call, 'MSC', 'MMH'],
     NCT: [
       {
         name: 'WDHB',
@@ -53,7 +46,7 @@ export const smos: Array<SMODefinition> = [
   {
     name: 'AB',
     endDate: null,
-    activities: [...hr, ...wards, ...clinics, 'ACT', 'NSH', 'ADM', 'UNI'],
+    activities: [...full, ...call, 'UNI', 'NSH', 'WRE'],
     NCT: [
       {
         name: 'NCT',
@@ -70,7 +63,31 @@ export const smos: Array<SMODefinition> = [
   {
     name: 'PB',
     endDate: null,
-    activities: [...hr, ...wards, ...clinics, 'ACT', 'NSH', 'ADM', 'Epi'],
+    activities: [...full, ...call, 'NSH', 'Epi', 'EEG'],
+    NCT: [
+      {
+        name: 'NCT',
+        AM: 'every Monday, Friday',
+        PM: 'every Monday',
+      },
+    ],
+  },
+  {
+    name: 'ElW',
+    endDate: null,
+    activities: [...full, 'EEG', 'EMG', 'BTX'],
+    NCT: [
+      {
+        name: 'NCT',
+        AM: 'every Monday, Friday',
+        PM: 'every Monday',
+      },
+    ],
+  },
+  {
+    name: 'NC',
+    endDate: null,
+    activities: [...full, ...call, 'EEG', 'WDHB'],
     NCT: [
       {
         name: 'NCT',

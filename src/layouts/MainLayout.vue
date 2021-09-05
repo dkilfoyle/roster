@@ -11,9 +11,16 @@
           @click="toggleLeftDrawer"
         />
 
-        <q-toolbar-title> Quasar App </q-toolbar-title>
+        <q-separator dark vertical inset />
 
-        <div>Quasar v{{ $q.version }}</div>
+        <q-toolbar-title>Neurology Roster </q-toolbar-title>
+
+        <div class="text-center">{{ store.monthName }}</div>
+
+        <q-tabs align="right">
+          <q-route-tab to="/activityPage" label="Activity View" />
+          <q-route-tab to="/smoPage" label="SMO View" />
+        </q-tabs>
       </q-toolbar>
     </q-header>
 
@@ -33,11 +40,13 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
+import { useStore } from '../stores/store';
 
 export default defineComponent({
   name: 'MainLayout',
 
   setup() {
+    const store = useStore();
     const leftDrawerOpen = ref(false);
 
     return {
@@ -45,6 +54,7 @@ export default defineComponent({
       toggleLeftDrawer() {
         leftDrawerOpen.value = !leftDrawerOpen.value;
       },
+      store,
     };
   },
 });

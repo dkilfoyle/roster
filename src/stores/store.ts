@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia';
-import { roster } from './roster';
+import { roster, RosterEntry } from './roster';
 import { smos } from './smos';
 import { activities } from './activities';
 import {
   addDays,
   eachDayOfInterval,
+  format,
   isSameDay,
   isWeekend,
   // subDays,
@@ -15,14 +16,23 @@ export type Time = 'AM' | 'PM';
 
 export const useStore = defineStore('main', {
   state: () => ({
+    version: '0.1',
     startDate: new Date('2021-08-02'),
     numWeeks: 4,
     showWeekend: false,
-    roster,
+    rosterAll: roster,
     smos,
     activities,
   }),
   getters: {
+    monthName: (state) => {
+      return format(state.startDate, 'MMM yyyy');
+    },
+    roster(state): Array<RosterEntry> {
+      return state.rosterAll.filter(
+        (entry) => entry.date >= state.startDate && entry.date <= this.endDate
+      );
+    },
     endDate: (state) => addDays(state.startDate, state.numWeeks * 7 - 1),
     dates(state): Array<Date> {
       return eachDayOfInterval({
@@ -33,6 +43,12 @@ export const useStore = defineStore('main', {
     activityNames: (state) => state.activities.map((activity) => activity.name),
   },
   actions: {
+    createNewMonth(startDate: Date, numWeeks: number) {
+      this.startDate = startDate;
+      this.numWeeks = numWeeks;
+      this.compileActivities();
+      this.compileSMOs();
+    },
     setStartDate(date: Date) {
       this.startDate = date;
       this.compileActivities();
@@ -49,6 +65,49 @@ export const useStore = defineStore('main', {
         };
       });
     },
+    compileSMOs() {
+      // run only when creating new month otherwise
+      console.log(
+        'Warning: compile SMOs will reset any existing NCT times back to NCT default'
+      );
+      this.smos.forEach((smo) => {
+        smo.NCT.forEach((nct) => {
+          this.parseRRule(nct.AM).forEach((date) =>
+            this.setRoster(date, 'AM', smo.name, nct.name)
+          );
+          this.parseRRule(nct.PM).forEach((date) =>
+            this.setRoster(date, 'PM', smo.name, nct.name)
+          );
+        });
+      });
+    },
+    parseRRule(rule: string) {
+      const r = RRule.fromText(rule);
+      r.options.dtstart = new Date('2010-01-01');
+      return r.between(this.startDate, this.endDate, true);
+      // .map((date) => subDays(date, 1));
+    },
+
+    /**
+     * set activity for date/time/smo, create new roster entry if needed
+     */
+    setRoster(date: Date, time: Time, smoName: string, activityName: string) {
+      const found = roster.find(
+        (entry) =>
+          entry.date == date && entry.time == time && entry.smo == smoName
+      );
+      if (found) {
+        found.activity == activityName;
+      } else {
+        this.roster.push({
+          date,
+          time,
+          smo: smoName,
+          activity: activityName,
+        });
+      }
+    },
+
     getActivity(activityName: string) {
       const activity = this.activities.find(
         (activity) => activity.name == activityName
@@ -61,6 +120,9 @@ export const useStore = defineStore('main', {
       if (!activity) throw new Error(`Activity ${smoName} is not defined`);
       return activity;
     },
+
+    // ActivityView utilities
+
     getAssignedSMOs(date: Date, time: Time, activityName: string) {
       return this.roster.filter(
         (entry) =>
@@ -75,14 +137,9 @@ export const useStore = defineStore('main', {
         return smo.activities.includes(activityName);
       });
     },
-    parseRRule(rule: string) {
-      const r = RRule.fromText(rule);
-      r.options.dtstart = new Date('2010-01-01');
-      return r.between(this.startDate, this.endDate, true);
-      // .map((date) => subDays(date, 1));
-    },
+
     /**
-     * Is activity allowed at this date and time
+     * Is activity allowed to be scheduled this date and time
      */
     isAllowedActivity(date: Date, time: Time, activityName: string) {
       const activity = this.getActivity(activityName);
@@ -91,6 +148,9 @@ export const useStore = defineStore('main', {
         isSameDay(activityDate, date)
       );
     },
+    /**
+     * Is activity valid at this date time - allowed to be scheduled, within allocation limits
+     */
     isValidActivity(date: Date, time: Time, activityName: string) {
       const result = {
         answer: true,
@@ -149,6 +209,63 @@ export const useStore = defineStore('main', {
         if (foundDateMatches.length > minMax[1]) {
           result.reasons.push(
             `PerDay: expected < ${minMax[1]}, found ${foundDateMatches.length}`
+          );
+        }
+      }
+
+      result.answer = result.reasons.length == 0;
+      // console.log(date, time, activityName, result);
+      return result;
+    },
+
+    // SmoView utilities
+
+    getAssignedActivities(date: Date, time: Time, smoName: string) {
+      return this.roster.filter(
+        (entry) =>
+          isSameDay(entry.date, date) &&
+          entry.time == time &&
+          entry.smo == smoName &&
+          entry.activity != 'Call'
+      );
+    },
+    getAllowedActivities(smoName: string) {
+      return this.getSMO(smoName).activities;
+    },
+
+    /**
+     * Is smo valid at this date time - allowed to be scheduled, not already scheduled elsewhere
+     */
+    isValidSMO(date: Date, time: Time, smoName: string) {
+      const result = {
+        answer: true,
+        reasons: Array<string>(),
+      };
+
+      const assignedActivities = this.getAssignedActivities(
+        date,
+        time,
+        smoName
+      );
+
+      // test if SMO already assigned to another activity at same date and time
+      if (assignedActivities.length > 1) {
+        result.reasons.push(
+          `${smoName} is already assigned to ${assignedActivities
+            .map((x) => x.activity)
+            .join(',')}`
+        );
+      } else if (assignedActivities.length == 0) {
+        result.reasons.push(`${smoName} awaiting assignment}`);
+      } else {
+        // foundTimeMatches.length == 1
+        if (
+          !this.getAllowedActivities(smoName).includes(
+            assignedActivities[0].activity
+          )
+        ) {
+          result.reasons.push(
+            `${assignedActivities[0].activity} is not an allowed activity for ${smoName}`
           );
         }
       }

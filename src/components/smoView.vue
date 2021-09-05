@@ -17,28 +17,28 @@
       </tr>
     </thead>
     <tbody>
-      <template v-for="(activity, i) in store.activities" :key="activity">
+      <template v-for="(smo, i) in store.smos" :key="i">
         <tr :class="`row-${i % 2}`">
-          <td>{{ activity.name }}</td>
+          <td>{{ smo.name }}</td>
           <td style="border-right: 2px solid black">AM</td>
-          <activity-cell
+          <smo-cell
             v-for="date in store.dates"
             :key="date"
             :dateStr="date.toDateString()"
             time="AM"
-            :activityName="activity.name"
-          ></activity-cell>
+            :smoName="smo.name"
+          ></smo-cell>
         </tr>
         <tr :class="`row-${i % 2} pm-row`">
           <td></td>
           <td style="border-right: 2px solid black">PM</td>
-          <activity-cell
+          <smo-cell
             v-for="date in store.dates"
             :key="date"
             :dateStr="date.toDateString()"
             time="PM"
-            :activityName="activity.name"
-          ></activity-cell>
+            :smoName="smo.name"
+          ></smo-cell>
         </tr>
       </template>
     </tbody>
@@ -49,12 +49,12 @@
 import { defineComponent } from 'vue';
 import { useStore } from '../stores/store';
 
-import activityCell from './activityCell.vue';
+import smoCell from './smoCell.vue';
 import { format } from 'date-fns';
 
 export default defineComponent({
   // name: 'ComponentName'
-  components: { activityCell },
+  components: { smoCell },
   setup() {
     const store = useStore();
     store.setStartDate(new Date('2021-08-02'));
