@@ -23,6 +23,7 @@ export const useStore = defineStore('main', {
     rosterAll: roster,
     smos,
     activities,
+    compiled: false,
   }),
   getters: {
     monthName: (state) => {
@@ -43,21 +44,12 @@ export const useStore = defineStore('main', {
     activityNames: (state) => state.activities.map((activity) => activity.name),
   },
   actions: {
-    createNewMonth(startDate: Date, numWeeks: number) {
+    setMonth(startDate: Date, numWeeks: number) {
       this.startDate = startDate;
       this.numWeeks = numWeeks;
       this.compileActivities();
       this.compileSMOs();
-    },
-    setStartDate(date: Date) {
-      this.startDate = date;
-      this.compileActivities();
-      this.compileSMOs();
-    },
-    setNumWeeks(x: number) {
-      this.numWeeks = x;
-      this.compileActivities();
-      this.compileSMOs();
+      this.compiled = true;
     },
     compileActivities() {
       this.activities.forEach((activity) => {

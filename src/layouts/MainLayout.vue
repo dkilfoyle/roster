@@ -1,5 +1,5 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
+  <q-layout view="hHh lpr lFf">
     <q-header elevated>
       <q-toolbar>
         <div class="col row items-center">
@@ -21,18 +21,45 @@
 
         <div class="col" style="text-align: center">{{ store.monthName }}</div>
 
-        <q-tabs class="col-auto">
-          <q-route-tab to="/activityPage" label="Activity View" />
-          <q-route-tab to="/smoPage" label="SMO View" />
+        <q-tabs inline-label class="col-auto">
+          <q-route-tab
+            icon="directions_run"
+            to="/activityPage"
+            label="Activity View"
+          />
+          <q-route-tab icon="person" to="/smoPage" label="SMO View" />
         </q-tabs>
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered class="bg-grey-1">
-      <q-list>
-        <q-item-label header class="text-grey-8">
-          Essential Links
-        </q-item-label>
+    <q-drawer v-model="leftDrawerOpen" side="left" bordered class="bg-grey-1">
+      <q-list dense>
+        <q-expansion-item
+          label="Month"
+          :content-inset-level="0.5"
+          expand-separator
+          icon="calendar_today"
+        >
+          <month-options></month-options>
+        </q-expansion-item>
+
+        <q-expansion-item
+          label="Activity View"
+          :content-inset-level="0.5"
+          expand-separator
+          icon="directions_run"
+        >
+          <activity-options></activity-options>
+        </q-expansion-item>
+
+        <q-expansion-item
+          label="SMO View"
+          :content-inset-level="0.5"
+          expand-separator
+          icon="person"
+        >
+          <smo-options></smo-options>
+        </q-expansion-item>
       </q-list>
     </q-drawer>
 
@@ -46,8 +73,13 @@
 import { defineComponent, ref } from 'vue';
 import { useStore } from '../stores/store';
 
+import activityOptions from '../components/activityOptions.vue';
+import smoOptions from '../components/smoOptions.vue';
+import monthOptions from '../components/monthOptions.vue';
+
 export default defineComponent({
   name: 'MainLayout',
+  components: { activityOptions, smoOptions, monthOptions },
 
   setup() {
     const store = useStore();
@@ -63,3 +95,13 @@ export default defineComponent({
   },
 });
 </script>
+
+<style scoped>
+.denser .q-item {
+  max-height: 32px;
+}
+
+.denser .q-checkbox {
+  max-height: 28px;
+}
+</style>

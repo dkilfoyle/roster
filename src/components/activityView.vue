@@ -57,7 +57,6 @@ export default defineComponent({
   components: { activityCell },
   setup() {
     const store = useStore();
-    store.setStartDate(new Date('2021-08-02'));
 
     return {
       store,
