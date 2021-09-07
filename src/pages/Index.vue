@@ -1,5 +1,5 @@
 <template>
-  <q-page padding class="row items-stretch items-center">
+  <q-page padding class="column items-center">
     <h2>Neurology Roster</h2>
     <h6>Select a month from the sidebar</h6>
   </q-page>

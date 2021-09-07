@@ -1,6 +1,8 @@
 <template>
   <q-page padding>
-    <activity-view v-if="store.compiled"></activity-view>
+    <q-scroll-area class="sa">
+      <activity-view v-if="store.compiled"></activity-view
+    ></q-scroll-area>
   </q-page>
 </template>
 
@@ -20,3 +22,9 @@ export default defineComponent({
   },
 });
 </script>
+
+<style scoped>
+.sa {
+  height: calc(100vh - 50px - 32px);
+}
+</style>
