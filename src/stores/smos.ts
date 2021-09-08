@@ -44,7 +44,7 @@ export const smos: Array<SMODefinition> = [
     activities: [...full, ...call, 'MSC', 'MMH'],
     NCT: [
       {
-        name: 'WDHB',
+        name: 'NCT',
         AM: 'every Tuesday',
         PM: 'every Monday',
       },

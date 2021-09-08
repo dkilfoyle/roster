@@ -8,17 +8,26 @@ import {
   format,
   isSameDay,
   isWeekend,
-  // subDays,
+  subDays,
+  isMonday,
+  nextMonday,
+  differenceInWeeks,
 } from 'date-fns';
 import { RRule } from 'rrule';
 
 export type Time = 'AM' | 'PM';
 
+export const getFirstMonday = (year: number, month: number) => {
+  const d = new Date(year, month, 1);
+  if (isMonday(d)) return d;
+  else return nextMonday(d);
+};
+
 export const useStore = defineStore('main', {
   state: () => ({
     version: '0.1',
-    startDate: new Date('2021-08-02'),
-    numWeeks: 4,
+    startDate: getFirstMonday(new Date().getFullYear(), new Date().getMonth()),
+    numWeeks: 1,
     showWeekend: false,
     rosterAll: roster,
     smos,
@@ -30,9 +39,12 @@ export const useStore = defineStore('main', {
       return format(state.startDate, 'MMM yyyy');
     },
     roster(state): Array<RosterEntry> {
-      return state.rosterAll.filter(
-        (entry) => entry.date >= state.startDate && entry.date <= this.endDate
-      );
+      return state.compiled
+        ? state.rosterAll.filter(
+            (entry) =>
+              entry.date >= state.startDate && entry.date <= this.endDate
+          )
+        : [];
     },
     endDate: (state) => addDays(state.startDate, state.numWeeks * 7 - 1),
     dates(state): Array<Date> {
@@ -44,15 +56,25 @@ export const useStore = defineStore('main', {
     activityNames: (state) => state.activities.map((activity) => activity.name),
   },
   actions: {
-    setMonth(startDate: Date, numWeeks: number) {
-      this.startDate = startDate;
-      this.numWeeks = numWeeks;
+    setMonth(year: number, month: number, numWeeks?: number) {
+      console.log('setMonth', year, month, numWeeks);
+      this.startDate = getFirstMonday(year, month);
+
+      if (typeof numWeeks == 'undefined') {
+        const nextFirstMonday = getFirstMonday(
+          month == 11 ? year + 1 : year,
+          (month + 1) % 12
+        );
+        this.numWeeks = differenceInWeeks(nextFirstMonday, this.startDate);
+      } else this.numWeeks = numWeeks;
+
       this.compileActivities();
       this.compileSMOs();
       this.compiled = true;
     },
     compileActivities() {
       this.activities.forEach((activity) => {
+        console.log('Compiling activity ', activity.name);
         activity.allowedDates = {
           AM: this.parseRRule(activity.AM),
           PM: this.parseRRule(activity.PM),
@@ -61,6 +83,7 @@ export const useStore = defineStore('main', {
     },
     compileSMOs() {
       this.smos.forEach((smo) => {
+        console.log('Compiling smo ', smo.name);
         smo.allowedDates = {
           AM: [...this.dates],
           PM: [...this.dates],
@@ -106,8 +129,9 @@ export const useStore = defineStore('main', {
     parseRRule(rule: string) {
       const r = RRule.fromText(rule);
       r.options.dtstart = new Date('2010-01-01');
-      return r.between(this.startDate, this.endDate, true);
-      // .map((date) => subDays(date, 1));
+      return r
+        .between(this.startDate, this.endDate, true)
+        .map((date) => subDays(date, 1));
     },
 
     /**

@@ -1,22 +1,26 @@
 <template>
   <div class="column">
-    <div class="col">Start Date: {{ format(startDate, 'yyyy-MM-dd') }}</div>
+    <div class="col">
+      Start Date: {{ format(store.startDate, 'yyyy-MM-dd') }}
+    </div>
     <div class="row q-gutter-md options items-center">
       <q-select
         v-model="month"
+        emit-value
+        map-options
         :options="[
-          'Jan',
-          'Feb',
-          'Mar',
-          'Apr',
-          'May',
-          'Jun',
-          'Jul',
-          'Aug',
-          'Sep',
-          'Oct',
-          'Nov',
-          'Dec',
+          { label: 'Jan', value: 0 },
+          { label: 'Feb', value: 1 },
+          { label: 'Mar', value: 2 },
+          { label: 'Apr', value: 3 },
+          { label: 'May', value: 4 },
+          { label: 'Jun', value: 5 },
+          { label: 'Jul', value: 6 },
+          { label: 'Aug', value: 7 },
+          { label: 'Sep', value: 8 },
+          { label: 'Oct', value: 9 },
+          { label: 'Nov', value: 10 },
+          { label: 'Dec', value: 11 },
         ]"
         class="col"
         options-dense
@@ -40,83 +44,33 @@ import {
   onMounted,
   toRefs,
 } from 'vue';
-import { differenceInWeeks, format } from 'date-fns';
-import { useStore } from '../stores/store';
+import { format } from 'date-fns';
+import { useStore, getFirstMonday } from '../stores/store';
 
 export default defineComponent({
   // name: 'ComponentName'
   setup() {
-    const state = reactive({
-      year: 2021,
-      month: 'Aug',
-    });
-
     const store = useStore();
 
-    const getFirstMonday = (year: number, month: number) => {
-      const d = new Date(`${year}-${month}-1`);
-      while (d.getDay() !== 1) {
-        d.setDate(d.getDate() + 1);
-      }
-      return d;
-    };
-
-    const monthNum = computed(() => {
-      switch (state.month) {
-        case 'Jan':
-          return 1;
-        case 'Feb':
-          return 2;
-        case 'Mar':
-          return 3;
-        case 'Apr':
-          return 4;
-        case 'May':
-          return 5;
-        case 'Jun':
-          return 6;
-        case 'Jul':
-          return 7;
-        case 'Aug':
-          return 8;
-        case 'Sep':
-          return 9;
-        case 'Oct':
-          return 10;
-        case 'Nov':
-          return 11;
-        case 'Dec':
-          return 12;
-        default:
-          return 0;
-      }
+    const state = reactive({
+      year: store.startDate.getFullYear(),
+      month: store.startDate.getMonth(),
     });
 
-    const startDate = computed(() => {
-      return getFirstMonday(state.year, monthNum.value);
-    });
-
-    //getFirstMonday(year.value, month.value));
-    const numWeeks = computed(() => {
-      const d = getFirstMonday(
-        state.year + (monthNum.value == 12 ? 1 : 0),
-        (monthNum.value + 1) % 12
-      );
-      return differenceInWeeks(d, startDate.value);
-    });
+    const firstMonday = computed(() => getFirstMonday(state.year, state.month));
 
     onMounted(() => {
-      store.setMonth(startDate.value, numWeeks.value);
+      store.setMonth(state.year, state.month);
     });
 
-    watch(startDate, (newStartDate) => {
+    watch(firstMonday, () => {
       // console.log(newStartDate, numWeeks.value);
-      store.setMonth(newStartDate, numWeeks.value);
+      store.setMonth(state.year, state.month);
     });
 
     return {
       ...toRefs(state),
-      startDate,
+      store,
       format,
     };
   },

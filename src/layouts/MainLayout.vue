@@ -21,14 +21,16 @@
 
         <div class="col" style="text-align: center">{{ store.monthName }}</div>
 
-        <q-tabs inline-label class="col-auto">
-          <q-route-tab
-            icon="directions_run"
-            to="/activityPage"
-            label="Activity View"
-          />
-          <q-route-tab icon="person" to="/smoPage" label="SMO View" />
-        </q-tabs>
+        <div class="col">
+          <q-tabs inline-label class="float-right">
+            <q-route-tab
+              icon="directions_run"
+              to="/activityPage"
+              label="Activity View"
+            />
+            <q-route-tab icon="person" to="/smoPage" label="SMO View" />
+          </q-tabs>
+        </div>
       </q-toolbar>
     </q-header>
 
@@ -64,7 +66,13 @@
     </q-drawer>
 
     <q-page-container>
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <keep-alive>
+            <component :is="Component"></component>
+          </keep-alive>
+        </transition>
+      </router-view>
     </q-page-container>
   </q-layout>
 </template>
@@ -103,5 +111,15 @@ export default defineComponent({
 
 .denser .q-checkbox {
   max-height: 28px;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

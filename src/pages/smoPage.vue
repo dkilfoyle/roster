@@ -1,5 +1,5 @@
 <template>
-  <q-page padding>
+  <q-page style="padding: 24px">
     <q-scroll-area class="sa">
       <smo-view v-if="store.compiled"></smo-view
     ></q-scroll-area>
@@ -25,6 +25,6 @@ export default defineComponent({
 
 <style scoped>
 .sa {
-  height: calc(100vh - 50px - 32px);
+  height: calc(100vh - 50px - 48px);
 }
 </style>
