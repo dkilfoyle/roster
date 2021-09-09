@@ -57,11 +57,13 @@ export default defineComponent({
     const isAllowedActivity = computed(() =>
       store.isAllowedActivity(date.value, time.value, activityName.value)
     );
+    const isHoliday = computed(() => store.isHoliday(date.value));
     const allowedSMOs = computed(() =>
       store.getAllowedSMOs(date.value, activityName.value)
     );
 
     const tdContent = computed(() => {
+      if (isHoliday.value) return '';
       const smos = assignedSMOs.value;
       if (smos.length == 0) return isAllowedActivity.value ? '?' : '-';
       else if (smos.length == 1) return smos[0].smo;
@@ -80,9 +82,9 @@ export default defineComponent({
           weekBoundary: store.showWeekend
             ? isSunday(date.value)
             : isFriday(date.value),
+          holiday: isHoliday.value,
+          invalid: !isHoliday.value && !isValidActivity.value.answer,
         },
-        { invalid: !isValidActivity.value.answer },
-        // `week-${Math.floor(differenceInDays(date, store.startDate) / 7) % 2}`,
       ];
     });
 
@@ -99,8 +101,4 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
-.tdtooltip p {
-  margin-bottom: 0px;
-}
-</style>
+<style scoped></style>

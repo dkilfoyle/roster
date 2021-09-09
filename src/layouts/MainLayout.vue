@@ -23,12 +23,13 @@
 
         <div class="col">
           <q-tabs inline-label class="float-right">
+            <q-route-tab icon="person" to="/" label="SMO View" exact />
             <q-route-tab
               icon="directions_run"
               to="/activityPage"
               label="Activity View"
+              exact
             />
-            <q-route-tab icon="person" to="/smoPage" label="SMO View" />
           </q-tabs>
         </div>
       </q-toolbar>

@@ -2,6 +2,8 @@ import { defineStore } from 'pinia';
 import { roster, RosterEntry } from './roster';
 import { smos } from './smos';
 import { activities } from './activities';
+import { holidays } from './holidays';
+
 import {
   addDays,
   eachDayOfInterval,
@@ -33,6 +35,7 @@ export const useStore = defineStore('main', {
     smos,
     activities,
     compiled: false,
+    holidays,
   }),
   getters: {
     monthName: (state) => {
@@ -152,6 +155,10 @@ export const useStore = defineStore('main', {
           activity: activityName,
         });
       }
+    },
+
+    isHoliday(date: Date) {
+      return this.holidays.some((x) => isSameDay(x, date));
     },
 
     getActivity(activityName: string) {

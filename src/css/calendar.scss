@@ -1,0 +1,100 @@
+.wrapper {
+  overflow: auto;
+}
+
+.row-0 td {
+  background: rgb(238, 238, 238);
+}
+
+.pm-row td {
+  border-bottom: 2px solid black;
+}
+
+td.weekBoundary {
+  border-right: 2px solid black;
+}
+
+td.invalid {
+  background: rgb(211, 0, 0, 0.3);
+}
+
+td.week-0 {
+  background: lightgreen;
+}
+
+td.week-1 {
+  background: white;
+}
+
+.pm-row th {
+  border-bottom: 2px solid black;
+}
+
+th,
+td {
+  border-right: 1px solid rgb(211, 211, 211);
+}
+
+.q-table th,
+.q-table td {
+  text-align: center;
+}
+
+.sticky-column-table {
+  height: calc(100vh - 50px - 48px);
+
+  thead {
+    tr:first-child,
+    tr:nth-child(2) {
+      th {
+        position: sticky;
+        /* higher than z-index for td below */
+        z-index: 2;
+        /* bg color is important; just specify one */
+        background: yellow;
+      }
+    }
+    tr:first-child th {
+      top: 0;
+      height: 30px;
+      background: green;
+    }
+    tr:nth-child(2) th {
+      top: 30px;
+      background: red;
+    }
+
+    tr:first-child,
+    tr:nth-child(2) {
+      th:first-child,
+      th:nth-child(2) {
+        z-index: 5;
+      }
+    }
+  }
+
+  td:first-child,
+  td:nth-child(2) {
+    z-index: 2;
+    background: orange;
+    position: sticky;
+  }
+
+  td:first-child,
+  th:first-child {
+    left: 0;
+    width: 62px;
+  }
+
+  td:nth-child(2),
+  th:nth-child(2) {
+    left: 62px;
+  }
+}
+
+.tdtooltip p {
+  margin-bottom: 0px;
+}
+.holiday {
+  background: yellow !important;
+}
