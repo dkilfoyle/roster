@@ -1,6 +1,6 @@
 <template>
-  <div class="column">
-    <div class="col">
+  <div class="column q-pa-md">
+    <div class="col text-center">
       Start Date: {{ format(store.startDate, 'yyyy-MM-dd') }}
     </div>
     <div class="row q-gutter-md options items-center">
@@ -32,6 +32,29 @@
         options-dense
       ></q-select>
     </div>
+    <q-btn class="col" @click="confirmNCT = true">Load NCT</q-btn>
+    <q-dialog v-model="confirmNCT" persistent>
+      <q-card>
+        <q-card-section>
+          <div class="text-h6">Warning</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          Generating NCT will overwrite any exists entries in the current month
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" color="primary" v-close-popup />
+          <q-btn
+            flat
+            label="Confirm"
+            color="primary"
+            @click="store.generateNCT"
+            v-close-popup
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -55,6 +78,7 @@ export default defineComponent({
     const state = reactive({
       year: store.startDate.getFullYear(),
       month: store.startDate.getMonth(),
+      confirmNCT: false,
     });
 
     const firstMonday = computed(() => getFirstMonday(state.year, state.month));

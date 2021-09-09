@@ -145,7 +145,7 @@ export const useStore = defineStore('main', {
       if (found) {
         found.activity == activityName;
       } else {
-        this.roster.push({
+        this.rosterAll.push({
           date,
           time,
           smo: smoName,
