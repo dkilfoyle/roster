@@ -14,7 +14,7 @@ export interface SMODefinition {
 
 const clinics = ['DSR', 'DSC', 'OPC', 'TNP', 'ncFSA', 'FSC', 'SPC'];
 const wards = ['Neuro', 'Stroke'];
-const hr = ['ANL', 'CME', 'SD', 'NCT'];
+const hr = ['AL', 'CME', 'SD', 'NCT', 'TIL'];
 const call = ['Call', 'RT'];
 const full = [...clinics, ...wards, ...hr, 'CRS', 'ACT', 'ADM'];
 
@@ -93,7 +93,7 @@ export const smos: Array<SMODefinition> = [
     name: 'RF',
     fullName: 'Richard Frith',
     endDate: null,
-    activities: [...full, 'BTX', 'EEG', 'EMG', 'WRE'],
+    activities: [...full, 'BTX', 'EEG', 'EMG', 'WRE', 'A+T'],
     NCT: [
       {
         name: 'NCT',
@@ -119,7 +119,7 @@ export const smos: Array<SMODefinition> = [
     name: 'DH',
     fullName: 'David Hutchinson',
     endDate: null,
-    activities: [...full, ...call, 'NSH', 'WTK', 'MMH'],
+    activities: [...full, ...call, 'NSH', 'WTH', 'MMH', 'WRE', 'MMH'],
     NCT: [
       {
         name: 'NCT',
@@ -145,7 +145,7 @@ export const smos: Array<SMODefinition> = [
     name: 'RR',
     fullName: 'Richard Roxburgh',
     endDate: null,
-    activities: [...full, ...call, 'WRE', 'MMH', 'UNI'],
+    activities: [...full, ...call, 'WRE', 'MMH', 'UNI', 'EFR'],
     NCT: [
       {
         name: 'Uni',
@@ -158,7 +158,7 @@ export const smos: Array<SMODefinition> = [
     name: 'MS',
     fullName: 'Mark Simpson',
     endDate: null,
-    activities: [...full, ...call, 'TBH', 'MMH', 'MSC', 'BTX', 'DBS'],
+    activities: [...full, ...call, 'TBH', 'MMH', 'MSC', 'BTX', 'DBS', 'MD cl'],
     NCT: [
       {
         name: 'NCT',
@@ -202,7 +202,7 @@ export const smos: Array<SMODefinition> = [
     name: 'EdW',
     fullName: 'Edward Wong',
     endDate: null,
-    activities: [...full, ...call, 'CDHB'],
+    activities: [...full, ...call, 'CDHB', 'MMH', 'MSC', 'BTX'],
     NCT: [
       {
         name: 'NCT',
@@ -233,7 +233,7 @@ export const smos: Array<SMODefinition> = [
     name: 'JB',
     fullName: 'Julian Bauer',
     endDate: null,
-    activities: [...full, ...call, 'NSH', 'WTK', 'EMG'],
+    activities: [...full, ...call, 'NSH', 'WTH', 'EMG', 'MND'],
     NCT: [
       {
         name: 'NCT',
@@ -266,7 +266,7 @@ export const smos: Array<SMODefinition> = [
     name: 'VD',
     fullName: 'Viswas Dayal',
     endDate: null,
-    activities: [...full, ...call, 'MMH', 'DBS'],
+    activities: [...full, ...call, 'MMH', 'MSC', 'DBS', 'MD cl'],
     NCT: [],
   },
   {

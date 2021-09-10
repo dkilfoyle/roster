@@ -40,6 +40,23 @@ td {
   text-align: center;
 }
 
+$red-1: #ffebee !default;
+$red-2: #ffcdd2 !default;
+$red-3: #ef9a9a !default;
+$red-4: #e57373 !default;
+$green-1: #e8f5e9 !default;
+$green-2: #c8e6c9 !default;
+$green-3: #a5d6a7 !default;
+$green-4: #81c784 !default;
+$yellow-1: #fffde7 !default;
+$yellow-2: #fff9c4 !default;
+$yellow-3: #fff59d !default;
+$yellow-4: #fff176 !default;
+$orange-1: #fff3e0 !default;
+$orange-2: #ffe0b2 !default;
+$orange-3: #ffcc80 !default;
+$orange-4: #ffb74d !default;
+
 .sticky-column-table {
   height: calc(100vh - 50px - 48px);
 
@@ -51,17 +68,17 @@ td {
         /* higher than z-index for td below */
         z-index: 2;
         /* bg color is important; just specify one */
-        background: yellow;
+        background: $yellow-4;
       }
     }
     tr:first-child th {
       top: 0;
       height: 30px;
-      background: green;
+      background: $green-4;
     }
     tr:nth-child(2) th {
       top: 30px;
-      background: red;
+      background: $red-4;
     }
 
     tr:first-child,
@@ -76,7 +93,7 @@ td {
   td:first-child,
   td:nth-child(2) {
     z-index: 2;
-    background: orange;
+    background: $orange-2;
     position: sticky;
   }
 

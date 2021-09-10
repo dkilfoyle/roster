@@ -81,13 +81,19 @@ export default defineComponent({
     });
 
     const tdClasses = computed(() => {
+      const invalidSMO = (myreason: string) =>
+        !isValidSMO.value.answer &&
+        isValidSMO.value.reasons.some((reason) => reason.includes(myreason));
       return [
         {
           weekBoundary: store.showWeekend
             ? isSunday(date.value)
             : isFriday(date.value),
         },
-        { invalid: !isValidSMO.value.answer },
+        { invalid2: invalidSMO('is already assigned') },
+        { invalid1: invalidSMO('awaiting assignment') },
+        { invalid3: invalidSMO('is not contracted') },
+        { invalid4: invalidSMO('is not an allowed activity') },
         {
           nct:
             assignedActivities.value.length &&
@@ -111,11 +117,23 @@ export default defineComponent({
 });
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .tdtooltip p {
   margin-bottom: 0px;
 }
 td.nct {
   color: lightgrey;
+}
+td.invalid1 {
+  background: $red-2 !important;
+}
+td.invalid2 {
+  background: $pink-2 !important;
+}
+td.invalid3 {
+  background: $purple-2 !important;
+}
+td.invalid4 {
+  background: $deep-purple-2 !important;
 }
 </style>

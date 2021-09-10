@@ -77,13 +77,22 @@ export default defineComponent({
     });
 
     const tdClasses = computed(() => {
+      const invalidReason = (myreason: string) =>
+        !isHoliday.value &&
+        !isValidActivity.value.answer &&
+        isValidActivity.value.reasons.some((reason) =>
+          reason.includes(myreason)
+        );
+
       return [
         {
           weekBoundary: store.showWeekend
             ? isSunday(date.value)
             : isFriday(date.value),
           holiday: isHoliday.value,
-          invalid: !isHoliday.value && !isValidActivity.value.answer,
+          invalid1: invalidReason('is already assigned'),
+          invalid2: invalidReason('awaiting assignment'),
+          invalid3: invalidReason('is not contracted'),
         },
       ];
     });
@@ -101,4 +110,14 @@ export default defineComponent({
 });
 </script>
 
-<style scoped></style>
+<style lang="scss" scoped>
+td .invalid1 {
+  background: $red-3;
+}
+td .invalid2 {
+  background: $pink-3;
+}
+td .invalid3 {
+  background: $purple-3;
+}
+</style>

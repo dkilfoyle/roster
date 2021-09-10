@@ -87,6 +87,7 @@ export const useStore = defineStore('main', {
     compileSMOs() {
       this.smos.forEach((smo) => {
         console.log('Compiling smo ', smo.name);
+
         smo.allowedDates = {
           AM: [...this.dates],
           PM: [...this.dates],
@@ -100,8 +101,9 @@ export const useStore = defineStore('main', {
             const index = smo.allowedDates?.AM.findIndex((date) =>
               isSameDay(date, amNCTDate)
             );
-            if (typeof index != 'undefined' && index > -1)
+            if (typeof index != 'undefined' && index > -1) {
               smo.allowedDates?.AM.splice(index, 1);
+            }
           });
           pmNCTDates.forEach((pmNCTDate) => {
             const index = smo.allowedDates?.PM.findIndex((date) =>
@@ -130,6 +132,7 @@ export const useStore = defineStore('main', {
       });
     },
     parseRRule(rule: string) {
+      if (rule == '') return [];
       const r = RRule.fromText(rule);
       r.options.dtstart = new Date('2010-01-01');
       return r
