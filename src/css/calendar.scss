@@ -15,7 +15,7 @@ td.weekBoundary {
 }
 
 td.invalid {
-  background: rgb(211, 0, 0, 0.3);
+  color: darkred;
 }
 
 td.week-0 {
@@ -90,27 +90,35 @@ $orange-4: #ffb74d !default;
     }
   }
 
-  td:first-child,
-  td:nth-child(2) {
-    z-index: 2;
-    background: $orange-2;
-    position: sticky;
-  }
+  tbody {
+    td:first-child,
+    td:nth-child(2) {
+      z-index: 2;
+      background: $orange-2;
+      position: sticky;
+    }
 
-  td:first-child,
-  th:first-child {
-    left: 0;
-    width: 62px;
-  }
+    td:first-child,
+    th:first-child {
+      left: 0;
+      min-width: 62px;
+      font-weight: bolder;
+      border-right-color: darkgrey;
+    }
 
-  td:nth-child(2),
-  th:nth-child(2) {
-    left: 62px;
+    td:nth-child(2),
+    th:nth-child(2) {
+      left: 62px;
+    }
   }
 }
 
 .tdtooltip p {
   margin-bottom: 0px;
+  background: red !important;
+}
+.tdtooltip {
+  background: blue !important;
 }
 .holiday {
   background: yellow !important;

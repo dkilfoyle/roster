@@ -13,6 +13,7 @@
     "@quasar/extras": "^1.0.0",
     "core-js": "^3.6.5",
     "date-fns": "^2.23.0",
+    "google-spreadsheet": "^3.1.15",
     "pinia": "^2.0.0-rc.6",
     "quasar": "^2.0.0",
     "rrule": "^2.6.8",

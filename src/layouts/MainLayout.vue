@@ -19,7 +19,23 @@
           </div>
         </div>
 
-        <div class="col" style="text-align: center">{{ store.monthName }}</div>
+        <div class="col" style="text-align: center">
+          <q-btn
+            flat
+            round
+            size="md"
+            @click="store.setPrevMonth"
+            icon="navigate_before"
+          ></q-btn>
+          {{ store.monthName }}
+          <q-btn
+            flat
+            round
+            size="md"
+            @click="store.setNextMonth"
+            icon="navigate_next"
+          ></q-btn>
+        </div>
 
         <div class="col">
           <q-tabs inline-label class="float-right">

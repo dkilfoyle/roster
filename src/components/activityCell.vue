@@ -9,10 +9,16 @@
     </q-menu>
     <q-tooltip v-if="tdHasTooltip">
       <div class="tdtooltip">
-        {{ assignedSMOs.map((smo) => smo.smo).join(', ') }}
-        <p v-for="(reason, i) in isValidActivity.reasons" :key="i">
+        <div class="col">
+          {{ assignedSMOs.map((smo) => smo.smo).join(', ') }}
+        </div>
+        <div
+          class="col"
+          v-for="(reason, i) in isValidActivity.reasons"
+          :key="i"
+        >
           {{ reason }}
-        </p>
+        </div>
       </div>
     </q-tooltip>
     {{ tdContent }}
@@ -90,9 +96,9 @@ export default defineComponent({
             ? isSunday(date.value)
             : isFriday(date.value),
           holiday: isHoliday.value,
-          invalid1: invalidReason('is already assigned'),
-          invalid2: invalidReason('awaiting assignment'),
-          invalid3: invalidReason('is not contracted'),
+          invalid1: invalidReason('PerSession'),
+          invalid2: invalidReason('PerDay'),
+          invalid3: invalidReason('Did not expect'),
         },
       ];
     });
@@ -111,13 +117,13 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-td .invalid1 {
-  background: $red-3;
+td.invalid1 {
+  background: $deep-orange-3;
 }
-td .invalid2 {
-  background: $pink-3;
+td.invalid2 {
+  background: $orange-3;
 }
-td .invalid3 {
-  background: $purple-3;
+td.invalid3 {
+  background: $yellow-3;
 }
 </style>

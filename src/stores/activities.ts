@@ -88,10 +88,10 @@ export const activities: Array<ActivityDefinition> = [
     perDay: 1,
   },
   {
-    name: 'WTK',
+    name: 'WTH',
     description: 'Waitakere Hospital consults',
-    AM: 'every week on Monday, Wednesday',
-    PM: '',
+    AM: '',
+    PM: 'every week on Monday, Wednesday',
     perSession: 1,
   },
   {
@@ -104,7 +104,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'OPC',
     description: 'Outpatient Clinic GLCC',
-    AM: 'every week on Monday, Wednesday, Thursday',
+    AM: 'every week on Monday, Wednesday, Thursday, Friday',
     PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perSession: [0, 2],
   },

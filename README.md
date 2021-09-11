@@ -1,26 +1,18 @@
-# Quasar App (roster)
+# Neuro Roster
 
 Neurology Roster Designer
 
-## Install the dependencies
-```bash
-npm install
-```
+## TODO
 
-### Start the app in development mode (hot-code reloading, error reporting, etc.)
-```bash
-quasar dev
-```
-
-### Lint the files
-```bash
-npm run lint
-```
-
-### Build the app for production
-```bash
-quasar build
-```
-
-### Customize the configuration
-See [Configuring quasar.conf.js](https://v2.quasar.dev/quasar-cli/quasar-conf-js).
+- ~generate NCT entries for new month~
+- ~public holiday display~
+- SMO context menu should be sorted by surname, unavail and unallowed in grey, unavail showing reason
+- Activity context menu should be alphabetical, invalid and unallowed in grey
+- function based rules for each activity eg RT after call
+- show activity summary
+- readonly for dates earlier than first monday of current month
+- break store into modules?
+- size slider
+- loading screens
+- offline storage
+- rule editor for smos and activities

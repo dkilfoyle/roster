@@ -16,6 +16,12 @@ import {
   differenceInWeeks,
 } from 'date-fns';
 import { RRule } from 'rrule';
+import { LoadingBar } from 'quasar';
+LoadingBar.setDefaults({
+  color: 'cyan',
+  size: '2px',
+  position: 'top',
+});
 
 export type Time = 'AM' | 'PM';
 
@@ -60,7 +66,8 @@ export const useStore = defineStore('main', {
   },
   actions: {
     setMonth(year: number, month: number, numWeeks?: number) {
-      console.log('setMonth', year, month, numWeeks);
+      // console.log('setMonth', year, month, numWeeks);
+      LoadingBar.start();
       this.startDate = getFirstMonday(year, month);
 
       if (typeof numWeeks == 'undefined') {
@@ -74,10 +81,22 @@ export const useStore = defineStore('main', {
       this.compileActivities();
       this.compileSMOs();
       this.compiled = true;
+      LoadingBar.stop();
+    },
+    setPrevMonth() {
+      const year = this.startDate.getFullYear();
+      const month = this.startDate.getMonth();
+      this.setMonth(month == 0 ? year - 1 : year, month == 0 ? 11 : month - 1);
+    },
+    setNextMonth() {
+      const year = this.startDate.getFullYear();
+      const month = this.startDate.getMonth();
+      this.setMonth(month == 11 ? year + 1 : year, month == 11 ? 0 : month + 1);
     },
     compileActivities() {
-      this.activities.forEach((activity) => {
-        console.log('Compiling activity ', activity.name);
+      this.activities.forEach((activity, i) => {
+        // console.log('Compiling activity ', activity.name);
+        LoadingBar.increment((i / this.activities.length) * 0.5);
         activity.allowedDates = {
           AM: this.parseRRule(activity.AM),
           PM: this.parseRRule(activity.PM),
@@ -85,8 +104,9 @@ export const useStore = defineStore('main', {
       });
     },
     compileSMOs() {
-      this.smos.forEach((smo) => {
-        console.log('Compiling smo ', smo.name);
+      this.smos.forEach((smo, i) => {
+        // console.log('Compiling smo ', smo.name);
+        LoadingBar.increment((i / this.smos.length) * 0.5);
 
         smo.allowedDates = {
           AM: [...this.dates],
@@ -95,6 +115,7 @@ export const useStore = defineStore('main', {
         smo.NCT.forEach((nct) => {
           const amNCTDates = this.parseRRule(nct.AM);
           const pmNCTDates = this.parseRRule(nct.PM);
+          if (smo.name == 'DK') console.log(amNCTDates);
 
           // remove each NCT date from allowedDates
           amNCTDates.forEach((amNCTDate) => {
@@ -135,9 +156,13 @@ export const useStore = defineStore('main', {
       if (rule == '') return [];
       const r = RRule.fromText(rule);
       r.options.dtstart = new Date('2010-01-01');
-      return r
-        .between(this.startDate, this.endDate, true)
-        .map((date) => subDays(date, 1));
+      const dates = r.between(this.startDate, this.endDate, true);
+      dates.forEach((date) => {
+        date.setHours(0);
+        date.setMinutes(0);
+      });
+      return dates;
+      // .map((date) => subDays(date, 1));
     },
 
     /**
@@ -278,6 +303,7 @@ export const useStore = defineStore('main', {
     // SmoView utilities
 
     getAssignedActivities(date: Date, time: Time, smoName: string) {
+      // return new Array<RosterEntry>();
       return this.roster.filter(
         (entry) =>
           isSameDay(entry.date, date) &&

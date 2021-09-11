@@ -48,7 +48,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, onBeforeUpdate, onUpdated } from 'vue';
 import { useStore } from '../stores/store';
 
 import activityCell from './activityCell.vue';
@@ -59,6 +59,14 @@ export default defineComponent({
   components: { activityCell },
   setup() {
     const store = useStore();
+
+    onBeforeUpdate(() => {
+      console.log('Activity view before update');
+    });
+
+    onUpdated(() => {
+      console.log('updated');
+    });
 
     return {
       store,

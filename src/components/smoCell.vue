@@ -90,7 +90,8 @@ export default defineComponent({
             ? isSunday(date.value)
             : isFriday(date.value),
         },
-        { invalid2: invalidSMO('is already assigned') },
+        { invalid: !isValidSMO.value.answer },
+        { invalid1: invalidSMO('is already assigned') },
         { invalid1: invalidSMO('awaiting assignment') },
         { invalid3: invalidSMO('is not contracted') },
         { invalid4: invalidSMO('is not an allowed activity') },
