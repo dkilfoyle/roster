@@ -1,11 +1,134 @@
 <template>
   <td :class="tdClasses">
-    <q-menu context-menu>
-      <q-list dense>
-        <q-item v-for="smo in allowedSMOs" :key="smo" clickable v-close-popup>
-          <q-item-section>{{ smo.name }}</q-item-section>
-        </q-item>
-      </q-list>
+    <q-menu context-menu style="min-height: 300px">
+      <div class="text-center q-pa-md bg-info q-mb-sm">
+        {{ activityName }} on {{ dateStr }}
+      </div>
+
+      <q-tabs v-model="smoTab" class="q-mt-md">
+        <q-tab name="available" label="Available"
+          ><q-badge
+            :color="availableSMOs.length > 0 ? 'green' : 'red'"
+            floating
+            >{{ availableSMOs.length }}</q-badge
+          ></q-tab
+        >
+        <q-tab name="unavailable" label="Unavailable"
+          ><q-badge color="red" floating>{{
+            unavailableSMOs.length
+          }}</q-badge></q-tab
+        >
+        <q-tab name="others" label="Others"
+          ><q-badge color="amber" floating>{{
+            incapableSMOs.length
+          }}</q-badge></q-tab
+        >
+      </q-tabs>
+      <q-separator></q-separator>
+      <q-tab-panels v-model="smoTab" animated>
+        <q-tab-panel name="available">
+          <div class="row">
+            <div class="col">
+              <q-list dense>
+                <q-item
+                  v-for="smo in availableSMOs.slice(
+                    0,
+                    Math.ceil(availableSMOs.length / 2)
+                  )"
+                  :key="smo"
+                  clickable
+                  v-close-popup
+                >
+                  <q-item-section>{{ smo.name }}</q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+            <div class="col">
+              <q-list dense>
+                <q-item
+                  v-for="smo in availableSMOs.slice(
+                    Math.ceil(availableSMOs.length / 2),
+                    availableSMOs.length
+                  )"
+                  :key="smo"
+                  clickable
+                  v-close-popup
+                >
+                  <q-item-section>{{ smo.name }}</q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+          </div>
+        </q-tab-panel>
+        <q-tab-panel name="unavailable">
+          <div class="row">
+            <div class="col">
+              <q-list dense>
+                <q-item
+                  v-for="smo in unavailableSMOs.slice(
+                    0,
+                    Math.ceil(unavailableSMOs.length / 2)
+                  )"
+                  :key="smo"
+                  clickable
+                  v-close-popup
+                >
+                  <q-item-section>{{ smo.name }}</q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+            <div class="col">
+              <q-list dense>
+                <q-item
+                  v-for="smo in unavailableSMOs.slice(
+                    Math.ceil(unavailableSMOs.length / 2),
+                    unavailableSMOs.length
+                  )"
+                  :key="smo"
+                  clickable
+                  v-close-popup
+                >
+                  <q-item-section>{{ smo.name }}</q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+          </div>
+        </q-tab-panel>
+        <q-tab-panel name="others">
+          <div class="row">
+            <div class="col">
+              <q-list dense>
+                <q-item
+                  v-for="smo in incapableSMOs.slice(
+                    0,
+                    Math.ceil(incapableSMOs.length / 2)
+                  )"
+                  :key="smo"
+                  clickable
+                  v-close-popup
+                >
+                  <q-item-section>{{ smo.name }}</q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+            <div class="col">
+              <q-list dense>
+                <q-item
+                  v-for="smo in incapableSMOs.slice(
+                    Math.ceil(incapableSMOs.length / 2),
+                    incapableSMOs.length
+                  )"
+                  :key="smo"
+                  clickable
+                  v-close-popup
+                >
+                  <q-item-section>{{ smo.name }}</q-item-section>
+                </q-item>
+              </q-list>
+            </div>
+          </div>
+        </q-tab-panel>
+      </q-tab-panels>
     </q-menu>
     <q-tooltip v-if="tdHasTooltip">
       <div class="tdtooltip">
@@ -53,6 +176,7 @@ export default defineComponent({
 
     const { dateStr, time, activityName } = toRefs(props);
     const date = ref(new Date(dateStr.value));
+    const smoTab = ref('available');
 
     const assignedSMOs = computed(() =>
       store.getAssignedSMOs(date.value, time.value, activityName.value)
@@ -64,8 +188,33 @@ export default defineComponent({
       store.isAllowedActivity(date.value, time.value, activityName.value)
     );
     const isHoliday = computed(() => store.isHoliday(date.value));
-    const allowedSMOs = computed(() =>
-      store.getAllowedSMOs(date.value, activityName.value)
+
+    const availableSMOs = computed(() =>
+      store.smos.filter((smo) =>
+        store.isAvailableSMO(
+          date.value,
+          time.value,
+          smo.name,
+          activityName.value
+        )
+      )
+    );
+
+    const unavailableSMOs = computed(() =>
+      store.smos.filter((smo) =>
+        store.isUnavailableSMO(
+          date.value,
+          time.value,
+          smo.name,
+          activityName.value
+        )
+      )
+    );
+
+    const incapableSMOs = computed(() =>
+      store.smos.filter(
+        (smo) => !store.isAllowedActivitySMO(activityName.value, smo.name)
+      )
     );
 
     const tdContent = computed(() => {
@@ -91,6 +240,7 @@ export default defineComponent({
         );
 
       return [
+        'activityCell',
         {
           weekBoundary: store.showWeekend
             ? isSunday(date.value)
@@ -104,10 +254,13 @@ export default defineComponent({
     });
 
     return {
+      smoTab,
       isValidActivity,
       isAllowedActivity,
       assignedSMOs,
-      allowedSMOs,
+      availableSMOs,
+      unavailableSMOs,
+      incapableSMOs,
       tdHasTooltip,
       tdContent,
       tdClasses,

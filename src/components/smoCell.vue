@@ -67,7 +67,7 @@ export default defineComponent({
     const tdContent = computed(() => {
       const activities = assignedActivities.value;
       if (activities.length == 0) {
-        if (store.isAllowedSMO(date.value, time.value, smoName.value))
+        if (store.isAllowedTimeSMO(date.value, time.value, smoName.value))
           return '?';
         else return '';
       } else if (activities.length == 1) return activities[0].activity;

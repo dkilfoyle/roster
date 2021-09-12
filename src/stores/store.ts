@@ -81,6 +81,7 @@ export const useStore = defineStore('main', {
       if (state.activityViewOptions.showInpatient) res.push('Inpatient');
       if (state.activityViewOptions.showConsults) res.push('Consults');
       if (state.activityViewOptions.showClinic) res.push('Clinic');
+      if (state.activityViewOptions.showProcedure) res.push('Procedure');
       if (state.activityViewOptions.showOther) res.push('Other');
       return res;
     },
@@ -148,7 +149,6 @@ export const useStore = defineStore('main', {
         smo.NCT.forEach((nct) => {
           const amNCTDates = this.parseRRule(nct.AM);
           const pmNCTDates = this.parseRRule(nct.PM);
-          if (smo.name == 'DK') console.log(amNCTDates);
 
           // remove each NCT date from allowedDates
           amNCTDates.forEach((amNCTDate) => {
@@ -382,11 +382,57 @@ export const useStore = defineStore('main', {
     /**
      * Is SMO allowed to be scheduled this date and time
      */
-    isAllowedSMO(date: Date, time: Time, smoName: string) {
+    isAllowedTimeSMO(date: Date, time: Time, smoName: string) {
       const smo = this.getSMO(smoName);
       if (!smo.allowedDates)
         throw new Error('allowed smo dates are not compiled');
       return smo.allowedDates[time].some((smoDate) => isSameDay(smoDate, date));
+    },
+
+    /**
+     * Is SMO allowed to be scheduled to this activity
+     */
+    isAllowedActivitySMO(activityName: string, smoName: string) {
+      return this.getAllowedActivities(smoName).includes(activityName);
+    },
+
+    /**
+     * Is SMO already scheduled elsewhere
+     */
+    isAssignedSMO(date: Date, time: Time, smoName: string) {
+      return this.getAssignedActivities(date, time, smoName).length > 0;
+    },
+
+    /**
+     * Is SMO available ie allowed time, allowed activity, not already schedueld
+     */
+    isAvailableSMO(
+      date: Date,
+      time: Time,
+      smoName: string,
+      activityName: string
+    ) {
+      return (
+        this.isAllowedActivitySMO(activityName, smoName) &&
+        this.isAllowedTimeSMO(date, time, smoName) &&
+        !this.isAssignedSMO(date, time, smoName)
+      );
+    },
+
+    /**
+     * Is SMO unavailable ie allowed activity but not time or already scheduled
+     */
+    isUnavailableSMO(
+      date: Date,
+      time: Time,
+      smoName: string,
+      activityName: string
+    ) {
+      return (
+        this.isAllowedActivitySMO(activityName, smoName) &&
+        (!this.isAllowedTimeSMO(date, time, smoName) ||
+          this.isAssignedSMO(date, time, smoName))
+      );
     },
 
     /**
@@ -412,22 +458,20 @@ export const useStore = defineStore('main', {
             .join(',')}`
         );
       } else if (assignedActivities.length == 0) {
-        if (this.isAllowedSMO(date, time, smoName))
+        if (this.isAllowedTimeSMO(date, time, smoName))
           result.reasons.push(`${smoName} awaiting assignment`);
       } else {
         // foundTimeMatches.length == 1
         const activityName = assignedActivities[0].activity;
         if (
-          !this.isAllowedSMO(date, time, smoName) &&
+          !this.isAllowedTimeSMO(date, time, smoName) &&
           !['NCT', 'WDHB', 'CDHB', 'UNI'].includes(activityName)
         ) {
           result.reasons.push(`${smoName} is not contracted`);
         }
 
         if (
-          !this.getAllowedActivities(smoName).includes(
-            assignedActivities[0].activity
-          )
+          !this.isAllowedActivitySMO(assignedActivities[0].activity, smoName)
         ) {
           result.reasons.push(
             `${assignedActivities[0].activity} is not an allowed activity for ${smoName}`
