@@ -1,5 +1,5 @@
 <template>
-  <div class="column q-pa-md">
+  <div class="column q-pb-lg q-pr-lg q-gutter-md">
     <div class="col text-center">
       Start Date: {{ format(store.startDate, 'yyyy-MM-dd') }}
     </div>
@@ -22,17 +22,23 @@
           { label: 'Nov', value: 10 },
           { label: 'Dec', value: 11 },
         ]"
+        filled
+        dense
         class="col"
         options-dense
       ></q-select>
       <q-select
         v-model="year"
         :options="[2018, 2019, 2020, 2021, 2022, 2023, 2024]"
+        filled
+        dense
         class="col"
         options-dense
       ></q-select>
     </div>
-    <q-btn class="col" @click="confirmNCT = true">Load NCT</q-btn>
+    <q-btn color="primary" class="col" @click="confirmNCT = true"
+      >Load NCT</q-btn
+    >
     <q-dialog v-model="confirmNCT" persistent>
       <q-card>
         <q-card-section>

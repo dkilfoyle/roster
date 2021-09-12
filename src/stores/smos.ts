@@ -12,9 +12,9 @@ export interface SMODefinition {
   };
 }
 
-const clinics = ['DSR', 'DSC', 'OPC', 'TNP', 'ncFSA', 'FSC', 'SPC'];
+const clinics = ['DSR', 'DSC', 'OPC', 'TNP', 'ncFSA', 'FSC', 'SPC', 'PCL'];
 const wards = ['Neuro', 'Stroke'];
-const hr = ['AL', 'CME', 'SD', 'NCT', 'TIL'];
+const hr = ['ANL', 'CME', 'PL', 'JS', 'SD', 'NCT', 'TIL'];
 const call = ['Call', 'RT'];
 const full = [...clinics, ...wards, ...hr, 'CRS', 'ACT', 'ADM'];
 
@@ -54,7 +54,7 @@ export const smos: Array<SMODefinition> = [
     name: 'AB',
     fullName: 'Alan Barber',
     endDate: null,
-    activities: [...full, ...call, 'UNI', 'NSH', 'WRE'],
+    activities: [...full, ...call, 'UNI', 'NSH', 'WRE', 'MS'],
     NCT: [
       {
         name: 'UNI',
@@ -97,7 +97,7 @@ export const smos: Array<SMODefinition> = [
     NCT: [
       {
         name: 'NCT',
-        AM: 'every Monday, Thursday, Friday',
+        AM: 'every Thursday, Friday',
         PM: 'every Monday, Tuesday, Friday',
       },
     ],
@@ -253,7 +253,7 @@ export const smos: Array<SMODefinition> = [
     name: 'PyB',
     fullName: 'Pyari Bose',
     endDate: null,
-    activities: [...full, 'MMH'],
+    activities: [...full, 'MMH', 'MSC'],
     NCT: [
       {
         name: 'NCT',

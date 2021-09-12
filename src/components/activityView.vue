@@ -3,7 +3,50 @@
     <q-markup-table dense class="sticky-column-table">
       <thead>
         <tr>
-          <th></th>
+          <th>
+            <q-btn icon="filter_alt" size="sm"
+              ><q-menu>
+                <div class="row q-pa-md">
+                  <div class="column">
+                    <q-checkbox
+                      v-model="store.activityViewOptions.showLeave"
+                      label="Leave"
+                      size="sm"
+                    />
+                    <q-checkbox
+                      v-model="store.activityViewOptions.showCall"
+                      label="Call"
+                      size="sm"
+                    />
+                    <q-checkbox
+                      v-model="store.activityViewOptions.showInpatient"
+                      label="Inpatient"
+                      size="sm"
+                    />
+                    <q-checkbox
+                      v-model="store.activityViewOptions.showClinic"
+                      label="Clinic"
+                      size="sm"
+                    />
+                    <q-checkbox
+                      v-model="store.activityViewOptions.showConsults"
+                      label="Consults"
+                      size="sm"
+                    />
+                    <q-checkbox
+                      v-model="store.activityViewOptions.showProcedure"
+                      label="Procedures"
+                      size="sm"
+                    />
+                    <q-checkbox
+                      v-model="store.activityViewOptions.showOther"
+                      label="Other"
+                      size="sm"
+                    />
+                  </div>
+                </div> </q-menu
+            ></q-btn>
+          </th>
           <th></th>
           <th v-for="date in store.dates" :key="date">
             {{ format(date, 'dd') }}
@@ -18,7 +61,10 @@
         </tr>
       </thead>
       <tbody>
-        <template v-for="(activity, i) in store.activities" :key="activity">
+        <template
+          v-for="(activity, i) in store.filteredActivities"
+          :key="activity"
+        >
           <tr :class="`row-${i % 2}`">
             <td>{{ activity.name }}</td>
             <td style="border-right: 2px solid black">AM</td>

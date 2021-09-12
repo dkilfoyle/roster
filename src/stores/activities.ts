@@ -1,6 +1,7 @@
 export interface ActivityDefinition {
   name: string;
   description?: string;
+  type?: string;
   AM: string;
   PM: string;
   allowedDates?: { AM: Array<Date>; PM: Array<Date> };
@@ -12,18 +13,21 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'ANL',
     description: 'Annual Leave',
+    type: 'Leave',
     AM: 'every weekday',
     PM: 'every weekday',
   },
   {
     name: 'CME',
     description: 'CME Leave',
+    type: 'Leave',
     AM: 'every weekday',
     PM: 'every weekday',
   },
   {
     name: 'Call',
     description: 'On Call',
+    type: 'Call',
     AM: 'every day',
     PM: 'every week on Friday, Saturday, Sunday',
     perSession: 1,
@@ -31,6 +35,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'RT',
     description: 'Recovery time',
+    type: 'Call',
     AM: 'every weekday',
     PM: '',
     perSession: [0, 1],
@@ -39,6 +44,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'Neuro',
     description: 'Neurology Ward',
+    type: 'Inpatient',
     AM: 'every weekday',
     PM: '',
     perDay: 1,
@@ -46,6 +52,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'Stroke',
     description: 'Stroke Ward',
+    type: 'Inpatient',
     AM: 'every weekday',
     PM: '',
     perDay: 1,
@@ -53,6 +60,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'ACT',
     description: 'Acutes ACH',
+    type: 'Inpatient',
     AM: 'every week on Thursday',
     PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perDay: 1,
@@ -60,6 +68,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'DSR',
     description: 'Daystay Reviews',
+    type: 'Clinic',
     AM: 'every weekday',
     PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perDay: 2,
@@ -68,6 +77,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'TNP',
     description: 'Triage, ncFSA, Phone',
+    type: 'Clinic',
     AM: 'every weekday',
     PM: '',
     perDay: 1,
@@ -76,6 +86,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'MMH',
     description: 'Middlemore Hospital consults',
+    type: 'Consults',
     AM: 'every weekday',
     PM: 'every Friday',
     perDay: 1,
@@ -83,6 +94,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'NSH',
     description: 'Northshore Hospital consults',
+    type: 'Consults',
     AM: 'every week on Monday, Wednesday, Friday',
     PM: '',
     perDay: 1,
@@ -90,6 +102,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'WTH',
     description: 'Waitakere Hospital consults',
+    type: 'Consults',
     AM: '',
     PM: 'every week on Monday, Wednesday',
     perSession: 1,
@@ -97,6 +110,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'DSC',
     description: 'Daystay Clinic',
+    type: 'Clinic',
     AM: 'every weekday',
     PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perSession: [0, 2],
@@ -104,6 +118,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'OPC',
     description: 'Outpatient Clinic GLCC',
+    type: 'Clinic',
     AM: 'every week on Monday, Wednesday, Thursday, Friday',
     PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perSession: [0, 2],
@@ -111,6 +126,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'EMG',
     description: 'EMG',
+    type: 'Procedure',
     AM: 'every day',
     PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perSession: [0, 2],
@@ -118,6 +134,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'EEG',
     description: 'EEG',
+    type: 'Procedure',
     AM: 'every day',
     PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perSession: [0, 1],
@@ -125,6 +142,7 @@ export const activities: Array<ActivityDefinition> = [
   {
     name: 'BTX',
     description: 'Botox',
+    type: 'Procedure',
     AM: 'every day',
     PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perSession: [0, 3],

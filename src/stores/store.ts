@@ -10,12 +10,12 @@ import {
   format,
   isSameDay,
   isWeekend,
-  subDays,
   isMonday,
   nextMonday,
   differenceInWeeks,
+  eachWeekOfInterval,
 } from 'date-fns';
-import { RRule } from 'rrule';
+// import { RRule } from 'rrule';
 import { LoadingBar } from 'quasar';
 LoadingBar.setDefaults({
   color: 'cyan',
@@ -42,6 +42,17 @@ export const useStore = defineStore('main', {
     activities,
     compiled: false,
     holidays,
+    activityViewOptions: {
+      showErrors: true,
+      showSummary: true,
+      showLeave: true,
+      showCall: true,
+      showInpatient: true,
+      showClinic: true,
+      showOther: true,
+      showProcedure: true,
+      showConsults: true,
+    },
   }),
   getters: {
     monthName: (state) => {
@@ -63,6 +74,28 @@ export const useStore = defineStore('main', {
       }).filter((date) => state.showWeekend || !isWeekend(date));
     },
     activityNames: (state) => state.activities.map((activity) => activity.name),
+    visibleActivities: (state) => {
+      const res: Array<string> = [];
+      if (state.activityViewOptions.showLeave) res.push('Leave');
+      if (state.activityViewOptions.showCall) res.push('Call');
+      if (state.activityViewOptions.showInpatient) res.push('Inpatient');
+      if (state.activityViewOptions.showConsults) res.push('Consults');
+      if (state.activityViewOptions.showClinic) res.push('Clinic');
+      if (state.activityViewOptions.showOther) res.push('Other');
+      return res;
+    },
+    filteredActivities(state) {
+      return state.activities.filter(
+        (activity) => {
+          if (activity.type) {
+            if (this.visibleActivities.includes(activity.type)) return true;
+            else return false;
+          }
+          return true;
+        }
+        // activity.type && this.visibleActivities.includes(activity.type)
+      );
+    },
   },
   actions: {
     setMonth(year: number, month: number, numWeeks?: number) {
@@ -154,14 +187,44 @@ export const useStore = defineStore('main', {
     },
     parseRRule(rule: string) {
       if (rule == '') return [];
-      const r = RRule.fromText(rule);
-      r.options.dtstart = new Date('2010-01-01');
-      const dates = r.between(this.startDate, this.endDate, true);
-      dates.forEach((date) => {
-        date.setHours(0);
-        date.setMinutes(0);
-      });
+
+      const days = Array<number>();
+      const r = rule.toLowerCase();
+
+      if (r == 'every weekday') {
+        days.push(...[1, 2, 3, 4, 5]);
+      } else if (r == 'every day') {
+        days.push(...[0, 1, 2, 3, 4, 5, 6]);
+      } else {
+        if (r.includes('sunday')) days.push(0);
+        if (r.includes('monday')) days.push(1);
+        if (r.includes('tuesday')) days.push(2);
+        if (r.includes('wednesday')) days.push(3);
+        if (r.includes('thursday')) days.push(4);
+        if (r.includes('friday')) days.push(5);
+        if (r.includes('saturday')) days.push(6);
+      }
+
+      const interval = { start: this.startDate, end: this.endDate };
+      const dates = Array<Date>();
+      days.forEach((day) =>
+        dates.push(
+          ...eachWeekOfInterval(interval, {
+            weekStartsOn: day as 0 | 1 | 2 | 3 | 4 | 5 | 6,
+          })
+        )
+      );
+
       return dates;
+
+      // const r = RRule.fromText(rule);
+      // r.options.dtstart = new Date('2010-01-01');
+      // const dates = r.between(this.startDate, this.endDate, true);
+      // dates.forEach((date) => {
+      //   date.setHours(0);
+      //   date.setMinutes(0);
+      // });
+      // return dates;
       // .map((date) => subDays(date, 1));
     },
 
