@@ -177,10 +177,10 @@ export const useStore = defineStore('main', {
       this.smos.forEach((smo) => {
         smo.NCT.forEach((nct) => {
           this.parseRRule(nct.AM).forEach((date) =>
-            this.setRoster(date, 'AM', smo.name, nct.name)
+            this.setRosterEntryActivity(date, 'AM', smo.name, nct.name)
           );
           this.parseRRule(nct.PM).forEach((date) =>
-            this.setRoster(date, 'PM', smo.name, nct.name)
+            this.setRosterEntryActivity(date, 'PM', smo.name, nct.name)
           );
         });
       });
@@ -231,10 +231,47 @@ export const useStore = defineStore('main', {
     /**
      * set activity for date/time/smo, create new roster entry if needed
      */
-    setRoster(date: Date, time: Time, smoName: string, activityName: string) {
+    addRosterEntry(
+      date: Date,
+      time: Time,
+      smoName: string,
+      activityName: string
+    ) {
       const found = roster.find(
         (entry) =>
-          entry.date == date && entry.time == time && entry.smo == smoName
+          isSameDay(entry.date, date) &&
+          entry.time == time &&
+          entry.smo == smoName &&
+          entry.activity == activityName
+      );
+      if (found) {
+        throw new Error(
+          `Roster entry already exists for ${date.toString()}:${time} ${smoName}, ${activityName}`
+        );
+      } else {
+        this.rosterAll.push({
+          date,
+          time,
+          smo: smoName,
+          activity: activityName,
+        });
+      }
+    },
+
+    /**
+     * set activity for date/time/smo, create new roster entry if needed
+     */
+    setRosterEntryActivity(
+      date: Date,
+      time: Time,
+      smoName: string,
+      activityName: string
+    ) {
+      const found = roster.find(
+        (entry) =>
+          isSameDay(entry.date, date) &&
+          entry.time == time &&
+          entry.smo == smoName
       );
       if (found) {
         found.activity == activityName;
@@ -245,6 +282,31 @@ export const useStore = defineStore('main', {
           smo: smoName,
           activity: activityName,
         });
+      }
+    },
+
+    /**
+     * Delete roster entry date/time/smo/activity
+     */
+    delRosterEntry(
+      date: Date,
+      time: Time,
+      smoName: string,
+      activityName: string
+    ) {
+      const foundIndex = roster.findIndex(
+        (entry) =>
+          isSameDay(entry.date, date) &&
+          entry.time == time &&
+          entry.smo == smoName &&
+          entry.activity == activityName
+      );
+      if (foundIndex == -1) {
+        throw new Error(
+          `Entry does not exist ${date.toString()}:${time} for ${smoName}, ${activityName}`
+        );
+      } else {
+        this.rosterAll.splice(foundIndex, 1);
       }
     },
 
@@ -403,6 +465,23 @@ export const useStore = defineStore('main', {
       return this.getAssignedActivities(date, time, smoName).length > 0;
     },
 
+    isOnLeaveSMO(date: Date, smoName: string) {
+      const assigned = this.getAssignedActivities(date, 'AM', smoName).concat(
+        this.getAssignedActivities(date, 'PM', smoName)
+      );
+      return assigned.some((entry) => ['ANL', 'CME'].includes(entry.activity));
+    },
+
+    isAvailableCallSMO(date: Date, time: Time, smoName: string) {
+      return (
+        this.isAllowedActivitySMO('Call', smoName) &&
+        !(
+          this.isOnLeaveSMO(date, smoName) ||
+          this.isOnLeaveSMO(addDays(date, 1), smoName)
+        )
+      );
+    },
+
     /**
      * Is SMO available ie allowed time, allowed activity, not already schedueld
      */
@@ -412,11 +491,14 @@ export const useStore = defineStore('main', {
       smoName: string,
       activityName: string
     ) {
-      return (
-        this.isAllowedActivitySMO(activityName, smoName) &&
-        this.isAllowedTimeSMO(date, time, smoName) &&
-        !this.isAssignedSMO(date, time, smoName)
-      );
+      if (activityName == 'Call')
+        return this.isAvailableCallSMO(date, time, smoName);
+      else
+        return (
+          this.isAllowedActivitySMO(activityName, smoName) &&
+          this.isAllowedTimeSMO(date, time, smoName) &&
+          !this.isAssignedSMO(date, time, smoName)
+        );
     },
 
     /**
@@ -428,11 +510,18 @@ export const useStore = defineStore('main', {
       smoName: string,
       activityName: string
     ) {
-      return (
-        this.isAllowedActivitySMO(activityName, smoName) &&
-        (!this.isAllowedTimeSMO(date, time, smoName) ||
-          this.isAssignedSMO(date, time, smoName))
-      );
+      if (activityName == 'Call')
+        return (
+          this.isAllowedActivitySMO('Call', smoName) &&
+          (this.isOnLeaveSMO(date, smoName) ||
+            this.isOnLeaveSMO(addDays(date, 1), smoName))
+        );
+      else
+        return (
+          this.isAllowedActivitySMO(activityName, smoName) &&
+          (!this.isAllowedTimeSMO(date, time, smoName) ||
+            this.isAssignedSMO(date, time, smoName))
+        );
     },
 
     /**
