@@ -5,7 +5,7 @@
         {{ activityName }} on {{ dateStr }}
       </div>
 
-      <q-tabs v-model="smoTab" class="q-mt-md">
+      <q-tabs v-model="cellTab" class="q-mt-md">
         <q-tab name="assigned" label="Cur"
           ><q-badge
             :color="assignedSMOs.length > 0 ? 'green' : 'red'"
@@ -32,7 +32,7 @@
         >
       </q-tabs>
       <q-separator></q-separator>
-      <q-tab-panels v-model="smoTab" animated>
+      <q-tab-panels v-model="cellTab" animated>
         <q-tab-panel name="assigned">
           <two-col-list
             :items="assignedSMOs"
@@ -107,7 +107,7 @@ export default defineComponent({
 
     const { dateStr, time, activityName } = toRefs(props);
     const date = ref(new Date(dateStr.value));
-    const smoTab = ref('available');
+    const cellTab = ref('available');
 
     const assignedSMOs = computed(() =>
       store
@@ -211,7 +211,7 @@ export default defineComponent({
     });
 
     return {
-      smoTab,
+      cellTab,
       isValidActivity,
       isAllowedActivity,
       assignedSMOs,

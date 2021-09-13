@@ -286,6 +286,33 @@ export const useStore = defineStore('main', {
     },
 
     /**
+     * set SMO for date/time/smo, create new roster entry if needed
+     */
+    setRosterEntrySMO(
+      date: Date,
+      time: Time,
+      smoName: string,
+      activityName: string
+    ) {
+      const found = roster.find(
+        (entry) =>
+          isSameDay(entry.date, date) &&
+          entry.time == time &&
+          entry.activity == activityName
+      );
+      if (found) {
+        found.smo = smoName;
+      } else {
+        this.rosterAll.push({
+          date,
+          time,
+          smo: smoName,
+          activity: activityName,
+        });
+      }
+    },
+
+    /**
      * Delete roster entry date/time/smo/activity
      */
     delRosterEntry(
