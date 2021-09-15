@@ -3,6 +3,14 @@
     <q-markup-table dense class="sticky-column-table">
       <thead>
         <tr>
+          <th></th>
+          <th></th>
+          <th v-for="date in store.dates" :key="date">
+            {{ format(date, 'dd') }}
+          </th>
+          <th v-if="store.activityViewOptions.showSummary">Sum</th>
+        </tr>
+        <tr class="pm-row">
           <th>
             <q-btn icon="filter_alt" size="sm"
               ><q-menu>
@@ -49,15 +57,9 @@
           </th>
           <th></th>
           <th v-for="date in store.dates" :key="date">
-            {{ format(date, 'dd') }}
-          </th>
-        </tr>
-        <tr class="pm-row">
-          <th></th>
-          <th></th>
-          <th v-for="date in store.dates" :key="date">
             {{ format(date, 'ccccc') }}
           </th>
+          <th v-if="store.activityViewOptions.showSummary"></th>
         </tr>
       </thead>
       <tbody>
@@ -75,6 +77,12 @@
               time="AM"
               :activityName="activity.name"
             ></activity-cell>
+            <td
+              v-if="store.activityViewOptions.showSummary"
+              :class="{ invalid5: sumError(activity.name) }"
+            >
+              {{ store.getActivitySum(activity.name) }}
+            </td>
           </tr>
           <tr :class="`row-${i % 2} pm-row`">
             <td></td>
@@ -86,6 +94,7 @@
               time="PM"
               :activityName="activity.name"
             ></activity-cell>
+            <td v-if="store.activityViewOptions.showSummary"></td>
           </tr>
         </template>
       </tbody>
@@ -114,8 +123,20 @@ export default defineComponent({
       console.log('updated');
     });
 
+    const sumError = (activityName: string) => {
+      const activity = store.getActivity(activityName);
+      if (
+        typeof activity != 'undefined' &&
+        typeof activity.perWeek != 'undefined'
+      )
+        return (
+          store.getActivitySum(activityName) < activity.perWeek * store.numWeeks
+        );
+    };
+
     return {
       store,
+      sumError,
       format,
     };
   },
@@ -124,4 +145,7 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 @import '../css/calendar.scss';
+td.invalid5 {
+  background: $deep-orange-3;
+}
 </style>

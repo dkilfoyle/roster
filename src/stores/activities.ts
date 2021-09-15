@@ -7,6 +7,7 @@ export interface ActivityDefinition {
   allowedDates?: { AM: Array<Date>; PM: Array<Date> };
   perDay?: [number, number] | number;
   perSession?: [number, number] | number;
+  perWeek?: number;
 }
 
 export const activities: Array<ActivityDefinition> = [
@@ -31,6 +32,7 @@ export const activities: Array<ActivityDefinition> = [
     AM: 'every day',
     PM: 'every week on Friday, Saturday, Sunday',
     perSession: 1,
+    perWeek: 6,
   },
   {
     name: 'RT',
@@ -130,6 +132,7 @@ export const activities: Array<ActivityDefinition> = [
     AM: 'every day',
     PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perSession: [0, 2],
+    perWeek: 15 / 4,
   },
   {
     name: 'EEG',
@@ -146,5 +149,6 @@ export const activities: Array<ActivityDefinition> = [
     AM: 'every day',
     PM: 'every week on Monday, Tuesday, Wednesday, Friday',
     perSession: [0, 3],
+    perWeek: 6 / 4,
   },
 ];

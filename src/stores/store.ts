@@ -65,6 +65,16 @@ export const useStore = defineStore('main', {
       showProcedure: true,
       showConsults: true,
     },
+    smoViewOptions: {
+      showErrors: true,
+      showSummary: true,
+      showEMG: true,
+      showEEG: true,
+      showCall: true,
+      showWard: true,
+      showWDHB: true,
+      showCDHB: true,
+    },
     user: '',
   }),
   getters: {
@@ -87,7 +97,28 @@ export const useStore = defineStore('main', {
       }).filter((date) => state.showWeekend || !isWeekend(date));
     },
     activityNames: (state) => state.activities.map((activity) => activity.name),
-    visibleActivities: (state) => {
+
+    visibleSMOs(state): Array<string> {
+      const res: Array<string> = [];
+      if (state.smoViewOptions.showCDHB) res.push('MMH');
+      if (state.smoViewOptions.showWDHB) res.push(...['NSH', 'WTH']);
+      if (state.smoViewOptions.showWard) res.push(...['Neuro', 'Stroke']);
+      if (state.smoViewOptions.showEMG) res.push('EMG');
+      if (state.smoViewOptions.showEEG) res.push('EEG');
+      if (state.smoViewOptions.showCall) res.push('Call');
+      return res;
+    },
+
+    filteredSMOs(state) {
+      return state.smos.filter((smo) =>
+        smo.activities.some((activity) => {
+          if (this.visibleSMOs.includes(activity)) return true;
+          else return false;
+        })
+      );
+    },
+
+    visibleActivities(state) {
       const res: Array<string> = [];
       if (state.activityViewOptions.showLeave) res.push('Leave');
       if (state.activityViewOptions.showCall) res.push('Call');
@@ -98,6 +129,7 @@ export const useStore = defineStore('main', {
       if (state.activityViewOptions.showOther) res.push('Other');
       return res;
     },
+
     filteredActivities(state) {
       return state.activities.filter(
         (activity) => {
@@ -110,6 +142,7 @@ export const useStore = defineStore('main', {
         // activity.type && this.visibleActivities.includes(activity.type)
       );
     },
+
     isUserSignedIn() {
       return !!getAuth().currentUser;
     },
@@ -388,6 +421,11 @@ export const useStore = defineStore('main', {
       const activity = this.smos.find((smo) => smo.name == smoName);
       if (!activity) throw new Error(`Activity ${smoName} is not defined`);
       return activity;
+    },
+
+    getActivitySum(activityName: string) {
+      return this.roster.filter((entry) => entry.activity == activityName)
+        .length;
     },
 
     // ActivityView utilities
