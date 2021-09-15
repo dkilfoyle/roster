@@ -9,7 +9,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 
-import { defineComponent, inject } from 'vue';
+import { defineComponent } from 'vue';
 import { useStore } from '../stores/store';
 import smoView from '../components/smoView.vue';
 

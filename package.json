@@ -15,6 +15,7 @@
     "@types/gapi.auth2": "0.0.55",
     "core-js": "^3.6.5",
     "date-fns": "^2.23.0",
+    "firebase": "^9.0.2",
     "pinia": "^2.0.0-rc.6",
     "quasar": "^2.0.0",
     "rrule": "^2.6.8",

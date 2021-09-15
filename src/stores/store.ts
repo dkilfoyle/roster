@@ -4,6 +4,17 @@ import { smos } from './smos';
 import { activities } from './activities';
 import { holidays } from './holidays';
 
+import { FirebaseApp } from 'firebase/app';
+import { User, getAuth } from 'firebase/auth';
+import {
+  query,
+  collection,
+  getFirestore,
+  onSnapshot,
+  QuerySnapshot,
+  DocumentData,
+} from 'firebase/firestore';
+
 import {
   addDays,
   eachDayOfInterval,
@@ -15,7 +26,7 @@ import {
   differenceInWeeks,
   eachWeekOfInterval,
 } from 'date-fns';
-// import { RRule } from 'rrule';
+
 import { LoadingBar } from 'quasar';
 LoadingBar.setDefaults({
   color: 'cyan',
@@ -34,6 +45,7 @@ export const getFirstMonday = (year: number, month: number) => {
 export const useStore = defineStore('main', {
   state: () => ({
     version: '0.1',
+    firebaseApp: null as FirebaseApp | null,
     startDate: getFirstMonday(new Date().getFullYear(), new Date().getMonth()),
     numWeeks: 1,
     showWeekend: false,
@@ -53,6 +65,7 @@ export const useStore = defineStore('main', {
       showProcedure: true,
       showConsults: true,
     },
+    user: '',
   }),
   getters: {
     monthName: (state) => {
@@ -97,8 +110,31 @@ export const useStore = defineStore('main', {
         // activity.type && this.visibleActivities.includes(activity.type)
       );
     },
+    isUserSignedIn() {
+      return !!getAuth().currentUser;
+    },
   },
   actions: {
+    setFirebase(fbApp: FirebaseApp) {
+      this.firebaseApp = fbApp;
+    },
+    setUser(e: User) {
+      console.log('store.setUser: ', e);
+      if (typeof e != 'undefined') {
+        const mysmos = query(collection(getFirestore(), 'smos'));
+        onSnapshot(mysmos, function (snapshot: QuerySnapshot<DocumentData>) {
+          snapshot.docChanges().forEach(function (change) {
+            console.log(
+              'onSnapShop: ',
+              change.type,
+              change.doc.id,
+              change.doc.data()
+            );
+          });
+        });
+      }
+      console.log('Set user', e);
+    },
     setMonth(year: number, month: number, numWeeks?: number) {
       // console.log('setMonth', year, month, numWeeks);
       LoadingBar.start();
