@@ -14,7 +14,7 @@ export interface SMODefinition {
 
 const clinics = ['DSR', 'DSC', 'OPC', 'TNP', 'ncFSA', 'FSC', 'SPC', 'PCL'];
 const wards = ['Neuro', 'Stroke'];
-const hr = ['ANL', 'CME', 'PL', 'JS', 'SD', 'NCT', 'TIL'];
+const hr = ['ANL', 'CME', 'PL', 'SL', 'JS', 'SD', 'NCT', 'TIL'];
 const call = ['Call', 'RT'];
 const full = [...clinics, ...wards, ...hr, 'CRS', 'ACT', 'ADM'];
 

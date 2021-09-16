@@ -1,6 +1,6 @@
 <template>
   <td :class="tdClasses">
-    <q-menu context-menu style="min-height: 300px">
+    <q-menu style="min-height: 300px">
       <div class="text-center q-pa-md bg-info q-mb-sm">
         {{ activityName }} on {{ dateStr }}
       </div>
@@ -189,6 +189,17 @@ export default defineComponent({
     });
 
     const tdClasses = computed(() => {
+      const classes: Array<unknown> = [
+        'activityCell',
+        {
+          weekBoundary: store.showWeekend
+            ? isSunday(date.value)
+            : isFriday(date.value),
+          holiday: isHoliday.value,
+        },
+      ];
+      if (!store.activityViewOptions.showErrors || isHoliday.value)
+        return classes;
       const invalidReason = (myreason: string) =>
         !isHoliday.value &&
         !isValidActivity.value.answer &&
@@ -196,18 +207,13 @@ export default defineComponent({
           reason.includes(myreason)
         );
 
-      return [
-        'activityCell',
+      return classes.concat([
         {
-          weekBoundary: store.showWeekend
-            ? isSunday(date.value)
-            : isFriday(date.value),
-          holiday: isHoliday.value,
           invalid1: invalidReason('PerSession'),
           invalid2: invalidReason('PerDay'),
           invalid3: invalidReason('Did not expect'),
         },
-      ];
+      ]);
     });
 
     return {
@@ -229,12 +235,12 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 td.invalid1 {
-  background: $deep-orange-3;
+  background: $deep-orange-3 !important;
 }
 td.invalid2 {
-  background: $orange-3;
+  background: $orange-3 !important;
 }
 td.invalid3 {
-  background: $yellow-3;
+  background: $yellow-3 !important;
 }
 </style>

@@ -19,7 +19,7 @@ import {
   addDays,
   eachDayOfInterval,
   format,
-  isSameDay,
+  // isSameDay,
   isWeekend,
   isMonday,
   nextMonday,
@@ -34,10 +34,19 @@ LoadingBar.setDefaults({
   position: 'top',
 });
 
+const isSameDay = (d1: Date, d2: Date) => {
+  return (
+    d1.getDate() == d2.getDate() &&
+    d1.getMonth() == d2.getMonth() &&
+    d1.getFullYear() == d2.getFullYear()
+  );
+  // return d1.getTime() == d2.getTime();
+};
+
 export type Time = 'AM' | 'PM';
 
 export const getFirstMonday = (year: number, month: number) => {
-  const d = new Date(year, month, 1);
+  const d = new Date(year, month, 1, 0, 0, 0, 0);
   if (isMonday(d)) return d;
   else return nextMonday(d);
 };
@@ -64,6 +73,7 @@ export const useStore = defineStore('main', {
       showOther: true,
       showProcedure: true,
       showConsults: true,
+      showNCT: true,
     },
     smoViewOptions: {
       showErrors: true,
@@ -126,6 +136,7 @@ export const useStore = defineStore('main', {
       if (state.activityViewOptions.showConsults) res.push('Consults');
       if (state.activityViewOptions.showClinic) res.push('Clinic');
       if (state.activityViewOptions.showProcedure) res.push('Procedure');
+      if (state.activityViewOptions.showNCT) res.push('NCT');
       if (state.activityViewOptions.showOther) res.push('Other');
       return res;
     },
@@ -323,6 +334,7 @@ export const useStore = defineStore('main', {
           time,
           smo: smoName,
           activity: activityName,
+          comment: '',
         });
       }
     },
@@ -350,6 +362,7 @@ export const useStore = defineStore('main', {
           time,
           smo: smoName,
           activity: activityName,
+          comment: '',
         });
       }
     },
@@ -377,6 +390,7 @@ export const useStore = defineStore('main', {
           time,
           smo: smoName,
           activity: activityName,
+          comment: '',
         });
       }
     },

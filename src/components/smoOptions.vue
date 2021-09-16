@@ -6,11 +6,6 @@
         label="Show Errors"
         size="sm"
       />
-      <q-checkbox
-        v-model="store.smoViewOptions.showSummary"
-        label="Show Summary"
-        size="sm"
-      />
     </q-item-section>
   </div>
 </template>

@@ -124,6 +124,7 @@ export default defineComponent({
     });
 
     const sumError = (activityName: string) => {
+      if (!store.activityViewOptions.showErrors) return false;
       const activity = store.getActivity(activityName);
       if (
         typeof activity != 'undefined' &&

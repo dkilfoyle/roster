@@ -1,6 +1,27 @@
 <template>
   <td :class="tdClasses">
-    <q-menu context-menu style="min-height: 300px">
+    <q-menu context-menu>
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h8">Notes for {{ smoName }} on {{ dateStr }}</div>
+        </q-card-section>
+
+        <q-card-section class="q-pt-none">
+          <q-input
+            dense
+            v-model="mycomment"
+            autofocus
+            @keyup.enter="prompt = false"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right" class="text-primary">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn flat label="Save Note" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-menu>
+    <q-menu style="min-height: 300px">
       <div class="text-center q-pa-md bg-info q-mb-sm">
         {{ smoName }} on {{ dateStr }}
       </div>
@@ -106,12 +127,18 @@ export default defineComponent({
       type: String,
       required: true,
     },
+    comment: {
+      type: String,
+      default: '',
+    },
   },
   components: { twoColList },
   setup(props) {
-    const { dateStr, time, smoName } = toRefs(props);
+    const { dateStr, time, smoName, comment } = toRefs(props);
     const date = ref(new Date(dateStr.value));
     const store = useStore();
+
+    const mycomment = ref(comment.value);
 
     const cellTab = ref('available');
     const toggleActivity = (activityName: string) => {
@@ -133,14 +160,18 @@ export default defineComponent({
         );
     };
 
+    const isHoliday = computed(() => store.isHoliday(date.value));
+
     const allowedActivities = computed(() =>
       store.getAllowedActivities(smoName.value)
     );
 
+    const assignedEntries = computed(() =>
+      store.getAssignedActivities(date.value, time.value, smoName.value)
+    );
+
     const assignedActivities = computed(() =>
-      store
-        .getAssignedActivities(date.value, time.value, smoName.value)
-        .map((entry) => entry.activity)
+      assignedEntries.value.map((entry) => entry.activity)
     );
 
     const availableActivities = computed(() =>
@@ -162,6 +193,7 @@ export default defineComponent({
     );
 
     const tdContent = computed(() => {
+      if (isHoliday.value) return '';
       const activities = assignedActivities.value;
       if (activities.length == 0) {
         if (store.isAllowedTimeSMO(date.value, time.value, smoName.value))
@@ -178,34 +210,41 @@ export default defineComponent({
     });
 
     const tdClasses = computed(() => {
-      const invalidSMO = (myreason: string) =>
-        !isValidSMO.value.answer &&
-        isValidSMO.value.reasons.some((reason) => reason.includes(myreason));
-      return [
+      const classes: Array<unknown> = [
         {
           weekBoundary: store.showWeekend
             ? isSunday(date.value)
             : isFriday(date.value),
-        },
-        { invalid: !isValidSMO.value.answer },
-        { invalid1: invalidSMO('is already assigned') },
-        { invalid1: invalidSMO('awaiting assignment') },
-        { invalid3: invalidSMO('is not contracted') },
-        { invalid4: invalidSMO('is not an allowed activity') },
-        {
+          holiday: isHoliday.value,
           nct:
             assignedActivities.value.length &&
             ['WDHB', 'NCT', 'UNI', 'CDHB', 'A+T'].includes(
               assignedActivities.value[0]
             ),
         },
-        // `week-${Math.floor(differenceInDays(date, store.startDate) / 7) % 2}`,
       ];
+
+      if (!store.smoViewOptions.showErrors || isHoliday.value) return classes;
+
+      const invalidSMO = (myreason: string) =>
+        !isValidSMO.value.answer &&
+        isValidSMO.value.reasons.some((reason) => reason.includes(myreason));
+      return classes.concat([
+        { invalid: !isValidSMO.value.answer },
+        { invalid1: invalidSMO('is already assigned') },
+        { invalid1: invalidSMO('awaiting assignment') },
+        { invalid3: invalidSMO('is not contracted') },
+        { invalid4: invalidSMO('is not an allowed activity') },
+
+        // `week-${Math.floor(differenceInDays(date, store.startDate) / 7) % 2}`,
+      ]);
     });
 
     return {
+      mycomment,
       cellTab,
       toggleActivity,
+      assignedEntries,
       availableActivities,
       unavailableActivities,
       incapableActivities,
