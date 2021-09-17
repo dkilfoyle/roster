@@ -28,6 +28,7 @@ import {
 } from 'date-fns';
 
 import { LoadingBar } from 'quasar';
+import { store } from 'quasar/wrappers';
 LoadingBar.setDefaults({
   color: 'cyan',
   size: '2px',
@@ -54,6 +55,7 @@ export const getFirstMonday = (year: number, month: number) => {
 export const useStore = defineStore('main', {
   state: () => ({
     version: '0.1',
+    monthVersion: 'final',
     firebaseApp: null as FirebaseApp | null,
     startDate: getFirstMonday(new Date().getFullYear(), new Date().getMonth()),
     numWeeks: 1,
@@ -334,7 +336,8 @@ export const useStore = defineStore('main', {
           time,
           smo: smoName,
           activity: activityName,
-          comment: '',
+          notes: '',
+          version: this.monthVersion,
         });
       }
     },
@@ -362,7 +365,8 @@ export const useStore = defineStore('main', {
           time,
           smo: smoName,
           activity: activityName,
-          comment: '',
+          notes: '',
+          version: this.monthVersion,
         });
       }
     },
@@ -374,7 +378,8 @@ export const useStore = defineStore('main', {
       date: Date,
       time: Time,
       smoName: string,
-      activityName: string
+      activityName: string,
+      notes: string
     ) {
       const found = roster.find(
         (entry) =>
@@ -390,8 +395,35 @@ export const useStore = defineStore('main', {
           time,
           smo: smoName,
           activity: activityName,
-          comment: '',
+          notes,
+          version: this.monthVersion,
         });
+      }
+    },
+
+    /**
+     * set notes for date/time/smo/activity
+     */
+    setRosterEntryNotes(
+      date: Date,
+      time: Time,
+      smoName: string,
+      activityName: string,
+      notes: string
+    ) {
+      const found = roster.find(
+        (entry) =>
+          isSameDay(entry.date, date) &&
+          entry.time == time &&
+          entry.activity == activityName &&
+          entry.smo == smoName
+      );
+      if (!found) {
+        throw new Error(
+          `Roster entry already exists for ${date.toString()}:${time} ${smoName}, ${activityName}`
+        );
+      } else {
+        found.notes = notes;
       }
     },
 

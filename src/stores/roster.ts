@@ -5,7 +5,8 @@ export interface RosterEntry {
   time: Time;
   activity: string;
   smo: string;
-  comment: string;
+  notes: string;
+  version: string;
 }
 
 import rosterData from '../../rosters/roster.json';
@@ -16,7 +17,8 @@ export const roster: Array<RosterEntry> = rosterData.map((entry) => ({
   time: entry.time as Time,
   smo: entry.smo,
   activity: entry.activity,
-  comment: '',
+  notes: '',
+  version: '',
 }));
 // [
 //   { date: new Date('2021-10-05'), time: 'AM', activity: 'Neuro', smo: 'DK' },

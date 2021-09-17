@@ -123,3 +123,32 @@ $orange-4: #ffb74d !default;
 .holiday {
   background: yellow !important;
 }
+
+.note {
+  position: relative;
+}
+.note:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: unset;
+  width: 0;
+  height: 0;
+  display: block;
+  border-left: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-top: 10px solid #f00;
+}
+
+.row-0 {
+  .note:after {
+    background: rgb(238, 238, 238);
+  }
+}
+
+.row-1 {
+  .note:after {
+    background: rgb(255, 255, 255);
+  }
+}

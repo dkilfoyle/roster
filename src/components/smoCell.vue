@@ -17,7 +17,7 @@
 
         <q-card-actions align="right" class="text-primary">
           <q-btn flat label="Cancel" v-close-popup />
-          <q-btn flat label="Save Note" v-close-popup />
+          <q-btn flat label="Save Note" @click="setComment" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-menu>
@@ -98,6 +98,7 @@
         <p v-for="(reason, i) in isValidSMO.reasons" :key="i">
           {{ reason }}
         </p>
+        <p>{{ mycomment }}</p>
       </div>
     </q-tooltip>
     {{ tdContent }}
@@ -139,6 +140,17 @@ export default defineComponent({
     const store = useStore();
 
     const mycomment = ref(comment.value);
+    const setComment = () => {
+      assignedActivities.value.forEach((activity) =>
+        store.setRosterEntrySMO(
+          date.value,
+          time.value,
+          smoName.value,
+          activity,
+          mycomment.value
+        )
+      );
+    };
 
     const cellTab = ref('available');
     const toggleActivity = (activityName: string) => {
@@ -156,7 +168,8 @@ export default defineComponent({
           date.value,
           time.value,
           smoName.value,
-          activityName
+          activityName,
+          ''
         );
     };
 
@@ -205,7 +218,9 @@ export default defineComponent({
 
     const tdHasTooltip = computed(() => {
       return (
-        isValidSMO.value.reasons.length || assignedActivities.value.length > 1
+        isValidSMO.value.reasons.length ||
+        assignedActivities.value.length > 1 ||
+        mycomment.value != ''
       );
     });
 
@@ -221,6 +236,7 @@ export default defineComponent({
             ['WDHB', 'NCT', 'UNI', 'CDHB', 'A+T'].includes(
               assignedActivities.value[0]
             ),
+          note: mycomment.value != '',
         },
       ];
 
@@ -242,6 +258,7 @@ export default defineComponent({
 
     return {
       mycomment,
+      setComment,
       cellTab,
       toggleActivity,
       assignedEntries,
