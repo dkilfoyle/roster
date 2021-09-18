@@ -8,7 +8,7 @@
           <th v-for="date in store.dates" :key="date">
             {{ format(date, 'dd') }}
           </th>
-          <th v-if="store.activityViewOptions.showSummary">Sum</th>
+          <th v-if="activityStore.viewOptions.showSummary">Sum</th>
         </tr>
         <tr class="pm-row">
           <th>
@@ -17,37 +17,37 @@
                 <div class="row q-pa-md">
                   <div class="column">
                     <q-checkbox
-                      v-model="store.activityViewOptions.showLeave"
+                      v-model="activityStore.viewOptions.showLeave"
                       label="Leave"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="store.activityViewOptions.showCall"
+                      v-model="activityStore.viewOptions.showCall"
                       label="Call"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="store.activityViewOptions.showInpatient"
+                      v-model="activityStore.viewOptions.showInpatient"
                       label="Inpatient"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="store.activityViewOptions.showClinic"
+                      v-model="activityStore.viewOptions.showClinic"
                       label="Clinic"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="store.activityViewOptions.showConsults"
+                      v-model="activityStore.viewOptions.showConsults"
                       label="Consults"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="store.activityViewOptions.showProcedure"
+                      v-model="activityStore.viewOptions.showProcedure"
                       label="Procedures"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="store.activityViewOptions.showOther"
+                      v-model="activityStore.viewOptions.showOther"
                       label="Other"
                       size="sm"
                     />
@@ -59,12 +59,12 @@
           <th v-for="date in store.dates" :key="date">
             {{ format(date, 'ccccc') }}
           </th>
-          <th v-if="store.activityViewOptions.showSummary"></th>
+          <th v-if="activityStore.viewOptions.showSummary"></th>
         </tr>
       </thead>
       <tbody>
         <template
-          v-for="(activity, i) in store.filteredActivities"
+          v-for="(activity, i) in activityStore.filteredActivities"
           :key="activity"
         >
           <tr :class="`row-${i % 2}`">
@@ -78,7 +78,7 @@
               :activityName="activity.name"
             ></activity-cell>
             <td
-              v-if="store.activityViewOptions.showSummary"
+              v-if="activityStore.viewOptions.showSummary"
               :class="{ invalid5: sumError(activity.name) }"
             >
               {{ store.getActivitySum(activity.name) }}
@@ -94,7 +94,7 @@
               time="PM"
               :activityName="activity.name"
             ></activity-cell>
-            <td v-if="store.activityViewOptions.showSummary"></td>
+            <td v-if="activityStore.viewOptions.showSummary"></td>
           </tr>
         </template>
       </tbody>
@@ -105,6 +105,7 @@
 <script lang="ts">
 import { defineComponent, onBeforeUpdate, onUpdated } from 'vue';
 import { useStore } from '../stores/store';
+import { useActivityStore } from '../stores/activities';
 
 import activityCell from './activityCell.vue';
 import { format } from 'date-fns';
@@ -114,6 +115,7 @@ export default defineComponent({
   components: { activityCell },
   setup() {
     const store = useStore();
+    const activityStore = useActivityStore();
 
     onBeforeUpdate(() => {
       console.log('Activity view before update');
@@ -124,8 +126,8 @@ export default defineComponent({
     });
 
     const sumError = (activityName: string) => {
-      if (!store.activityViewOptions.showErrors) return false;
-      const activity = store.getActivity(activityName);
+      if (!activityStore.viewOptions.showErrors) return false;
+      const activity = activityStore.getActivity(activityName);
       if (
         typeof activity != 'undefined' &&
         typeof activity.perWeek != 'undefined'
@@ -137,6 +139,7 @@ export default defineComponent({
 
     return {
       store,
+      activityStore,
       sumError,
       format,
     };

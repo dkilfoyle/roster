@@ -112,6 +112,7 @@ import { useStore } from '../stores/store';
 import { useSMOStore } from '../stores/smos';
 import { isSunday, isFriday } from 'date-fns';
 import { Time } from '../stores/store';
+import { useActivityStore } from 'src/stores/activities';
 
 export default defineComponent({
   // name: 'ComponentName'
@@ -140,7 +141,8 @@ export default defineComponent({
     const date = ref(new Date(dateStr.value));
 
     const store = useStore();
-    const smos = useSMOStore();
+    const smoStore = useSMOStore();
+    const activityStore = useActivityStore();
 
     const activityMenu = ref(false);
 
@@ -185,7 +187,7 @@ export default defineComponent({
     const isHoliday = computed(() => store.isHoliday(date.value));
 
     const allowedActivities = computed(
-      () => smos.getSMO(smoName.value).activities
+      () => smoStore.getSMO(smoName.value).activities
     );
 
     const assignedEntries = computed(() =>
@@ -205,7 +207,7 @@ export default defineComponent({
     const unavailableActivities = computed(() => []);
 
     const incapableActivities = computed(() =>
-      store.activityNames.filter(
+      activityStore.activityNames.filter(
         (activityName) => !allowedActivities.value.includes(activityName)
       )
     );
@@ -218,7 +220,7 @@ export default defineComponent({
       if (isHoliday.value) return '';
       const activities = assignedActivities.value;
       if (activities.length == 0) {
-        if (smos.isAllowedTimeSMO(date.value, time.value, smoName.value))
+        if (smoStore.isAllowedTimeSMO(date.value, time.value, smoName.value))
           return '?';
         else return '';
       } else if (activities.length == 1) return activities[0];
@@ -249,7 +251,7 @@ export default defineComponent({
         },
       ];
 
-      if (!smos.viewOptions.showErrors || isHoliday.value) return classes;
+      if (!smoStore.viewOptions.showErrors || isHoliday.value) return classes;
 
       const invalidSMO = (myreason: string) =>
         !isValidSMO.value.answer &&

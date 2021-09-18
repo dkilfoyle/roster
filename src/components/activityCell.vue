@@ -84,6 +84,7 @@ import { useStore } from '../stores/store';
 import { isSunday, isFriday } from 'date-fns';
 import { Time } from '../stores/store';
 import { useSMOStore } from 'src/stores/smos';
+import { useActivityStore } from 'src/stores/activities';
 
 export default defineComponent({
   // name: 'ComponentName'
@@ -106,6 +107,7 @@ export default defineComponent({
   setup(props) {
     const store = useStore();
     const smoStore = useSMOStore();
+    const activityStore = useActivityStore();
 
     const { dateStr, time, activityName } = toRefs(props);
     const date = ref(new Date(dateStr.value));
@@ -121,7 +123,11 @@ export default defineComponent({
       store.isValidActivity(date.value, time.value, activityName.value)
     );
     const isAllowedActivity = computed(() =>
-      store.isAllowedActivity(date.value, time.value, activityName.value)
+      activityStore.isAllowedActivity(
+        date.value,
+        time.value,
+        activityName.value
+      )
     );
     const isHoliday = computed(() => store.isHoliday(date.value));
 
@@ -204,7 +210,7 @@ export default defineComponent({
           holiday: isHoliday.value,
         },
       ];
-      if (!store.activityViewOptions.showErrors || isHoliday.value)
+      if (!activityStore.viewOptions.showErrors || isHoliday.value)
         return classes;
       const invalidReason = (myreason: string) =>
         !isHoliday.value &&

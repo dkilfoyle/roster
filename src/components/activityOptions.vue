@@ -2,12 +2,12 @@
   <div class="column q-pb-md">
     <q-item-section>
       <q-checkbox
-        v-model="store.activityViewOptions.showErrors"
+        v-model="activityStore.viewOptions.showErrors"
         label="Show Errors"
         size="sm"
       />
       <q-checkbox
-        v-model="store.activityViewOptions.showSummary"
+        v-model="activityStore.viewOptions.showSummary"
         label="Show Summary"
         size="sm"
       />
@@ -17,12 +17,12 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { useStore } from '../stores/store';
+import { useActivityStore } from '../stores/activities';
 export default defineComponent({
   // name: 'ComponentName'
   setup() {
-    const store = useStore();
-    return { store };
+    const activityStore = useActivityStore();
+    return { activityStore };
   },
 });
 </script>

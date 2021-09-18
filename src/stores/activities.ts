@@ -10,180 +10,82 @@ export interface ActivityDefinition {
   perWeek?: number;
 }
 
-export const activities: Array<ActivityDefinition> = [
-  {
-    name: 'ANL',
-    description: 'Annual Leave',
-    type: 'Leave',
-    AM: 'every weekday',
-    PM: 'every weekday',
+import { defineStore } from 'pinia';
+import { activityData } from './data/activityData';
+import { parseRRule, isSameDay } from './utils';
+import { Time } from './store';
+
+export const useActivityStore = defineStore('activity', {
+  state: () => ({
+    activities: activityData,
+    viewOptions: {
+      showErrors: true,
+      showSummary: true,
+      showLeave: true,
+      showCall: true,
+      showInpatient: true,
+      showClinic: true,
+      showOther: true,
+      showProcedure: true,
+      showConsults: true,
+      showNCT: true,
+    },
+  }),
+  getters: {
+    activityNames: (state) => state.activities.map((activity) => activity.name),
+
+    visibleActivities(state) {
+      const res: Array<string> = [];
+      if (state.viewOptions.showLeave) res.push('Leave');
+      if (state.viewOptions.showCall) res.push('Call');
+      if (state.viewOptions.showInpatient) res.push('Inpatient');
+      if (state.viewOptions.showConsults) res.push('Consults');
+      if (state.viewOptions.showClinic) res.push('Clinic');
+      if (state.viewOptions.showProcedure) res.push('Procedure');
+      if (state.viewOptions.showNCT) res.push('NCT');
+      if (state.viewOptions.showOther) res.push('Other');
+      return res;
+    },
+
+    filteredActivities(state) {
+      return state.activities.filter(
+        (activity) => {
+          if (activity.type) {
+            if (this.visibleActivities.includes(activity.type)) return true;
+            else return false;
+          }
+          return true;
+        }
+        // activity.type && this.visibleActivities.includes(activity.type)
+      );
+    },
   },
-  {
-    name: 'CME',
-    description: 'CME Leave',
-    type: 'Leave',
-    AM: 'every weekday',
-    PM: 'every weekday',
+  actions: {
+    getActivity(activityName: string): ActivityDefinition {
+      const activity = this.activities.find(
+        (activity) => activity.name == activityName
+      );
+      if (!activity) throw new Error(`Activity ${activityName} is not defined`);
+      return activity;
+    },
+
+    isAllowedActivity(date: Date, time: Time, activityName: string): boolean {
+      const activity = this.getActivity(activityName);
+      if (!activity.allowedDates)
+        throw new Error('activities are not compiled');
+      return activity.allowedDates[time].some((activityDate) =>
+        isSameDay(activityDate, date)
+      );
+    },
+
+    compile(startDate: Date, endDate: Date) {
+      this.activities.forEach((activity) => {
+        // console.log('Compiling activity ', activity.name);
+        activity.allowedDates = {
+          AM: parseRRule(activity.AM, startDate, endDate),
+          PM: parseRRule(activity.PM, startDate, endDate),
+        };
+      });
+    },
   },
-  {
-    name: 'Call',
-    description: 'On Call',
-    type: 'Call',
-    AM: 'every day',
-    PM: 'every week on Friday, Saturday, Sunday',
-    perSession: 1,
-    perWeek: 6,
-  },
-  {
-    name: 'RT',
-    description: 'Recovery time',
-    type: 'Call',
-    AM: 'every weekday',
-    PM: '',
-    perSession: [0, 1],
-    perDay: 1,
-  },
-  {
-    name: 'Neuro',
-    description: 'Neurology Ward',
-    type: 'Inpatient',
-    AM: 'every weekday',
-    PM: '',
-    perDay: 1,
-  },
-  {
-    name: 'Stroke',
-    description: 'Stroke Ward',
-    type: 'Inpatient',
-    AM: 'every weekday',
-    PM: '',
-    perDay: 1,
-  },
-  {
-    name: 'ACT',
-    description: 'Acutes ACH',
-    type: 'Inpatient',
-    AM: 'every week on Thursday',
-    PM: 'every week on Monday, Tuesday, Wednesday, Friday',
-    perDay: 1,
-  },
-  {
-    name: 'DSR',
-    description: 'Daystay Reviews',
-    type: 'Clinic',
-    AM: 'every weekday',
-    PM: 'every week on Monday, Tuesday, Wednesday, Friday',
-    perDay: 2,
-    perSession: 1,
-  },
-  {
-    name: 'TNP',
-    description: 'Triage, ncFSA, Phone',
-    type: 'Clinic',
-    AM: 'every weekday',
-    PM: '',
-    perDay: 1,
-    perSession: 1,
-  },
-  {
-    name: 'MMH',
-    description: 'Middlemore Hospital consults',
-    type: 'Consults',
-    AM: 'every weekday',
-    PM: 'every Friday',
-    perDay: 1,
-  },
-  {
-    name: 'NSH',
-    description: 'Northshore Hospital consults',
-    type: 'Consults',
-    AM: 'every week on Monday, Wednesday, Friday',
-    PM: '',
-    perDay: 1,
-  },
-  {
-    name: 'WTH',
-    description: 'Waitakere Hospital consults',
-    type: 'Consults',
-    AM: '',
-    PM: 'every week on Monday, Wednesday',
-    perSession: 1,
-  },
-  {
-    name: 'DSC',
-    description: 'Daystay Clinic',
-    type: 'Clinic',
-    AM: 'every weekday',
-    PM: 'every week on Monday, Tuesday, Wednesday, Friday',
-    perSession: [0, 2],
-  },
-  {
-    name: 'OPC',
-    description: 'Outpatient Clinic GLCC',
-    type: 'Clinic',
-    AM: 'every week on Monday, Wednesday, Thursday, Friday',
-    PM: 'every week on Monday, Tuesday, Wednesday, Friday',
-    perSession: [0, 2],
-  },
-  {
-    name: 'EMG',
-    description: 'EMG',
-    type: 'Procedure',
-    AM: 'every day',
-    PM: 'every week on Monday, Tuesday, Wednesday, Friday',
-    perSession: [0, 2],
-    perWeek: 15 / 4,
-  },
-  {
-    name: 'EEG',
-    description: 'EEG',
-    type: 'Procedure',
-    AM: 'every day',
-    PM: 'every week on Monday, Tuesday, Wednesday, Friday',
-    perSession: [0, 1],
-  },
-  {
-    name: 'BTX',
-    description: 'Botox',
-    type: 'Procedure',
-    AM: 'every day',
-    PM: 'every week on Monday, Tuesday, Wednesday, Friday',
-    perSession: [0, 3],
-    perWeek: 6 / 4,
-  },
-  {
-    name: 'SL',
-    description: 'Special Leave',
-    type: 'Leave',
-    AM: 'every day',
-    PM: 'every day',
-  },
-  {
-    name: 'NCT',
-    description: 'Non-contracted time',
-    type: 'NCT',
-    AM: 'every day',
-    PM: 'every day',
-  },
-  {
-    name: 'WDHB',
-    description: 'Non-contracted time (WDHB)',
-    type: 'NCT',
-    AM: 'every day',
-    PM: 'every day',
-  },
-  {
-    name: 'CDHB',
-    description: 'Non-contracted time (CDHB)',
-    type: 'NCT',
-    AM: 'every day',
-    PM: 'every day',
-  },
-  {
-    name: 'UNI',
-    description: 'Non-contracted time (UNI)',
-    type: 'NCT',
-    AM: 'every day',
-    PM: 'every day',
-  },
-];
+});

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { useSMOStore } from './smos';
+import { useActivityStore } from './activities';
 
 import {
   roster as rosterRaw,
@@ -7,7 +8,6 @@ import {
   SearchRosterEntry,
   SetRosterEntry,
 } from './roster';
-import { activities } from './activities';
 import { holidays } from './holidays';
 
 import { FirebaseApp } from 'firebase/app';
@@ -29,12 +29,7 @@ import {
   differenceInWeeks,
 } from 'date-fns';
 
-import {
-  getEntryTimestamp,
-  getFirstMonday,
-  isSameDay,
-  parseRRule,
-} from './utils';
+import { getEntryTimestamp, getFirstMonday, isSameDay } from './utils';
 
 import { LoadingBar } from 'quasar';
 LoadingBar.setDefaults({
@@ -54,21 +49,9 @@ export const useStore = defineStore('main', {
     numWeeks: 1,
     showWeekend: false,
     rosterAll: rosterRaw,
-    activities,
     compiled: false,
     holidays,
-    activityViewOptions: {
-      showErrors: true,
-      showSummary: true,
-      showLeave: true,
-      showCall: true,
-      showInpatient: true,
-      showClinic: true,
-      showOther: true,
-      showProcedure: true,
-      showConsults: true,
-      showNCT: true,
-    },
+
     user: '',
   }),
   getters: {
@@ -116,33 +99,6 @@ export const useStore = defineStore('main', {
         end: this.endDate,
       }).filter((date) => state.showWeekend || !isWeekend(date));
     },
-    activityNames: (state) => state.activities.map((activity) => activity.name),
-
-    visibleActivities(state) {
-      const res: Array<string> = [];
-      if (state.activityViewOptions.showLeave) res.push('Leave');
-      if (state.activityViewOptions.showCall) res.push('Call');
-      if (state.activityViewOptions.showInpatient) res.push('Inpatient');
-      if (state.activityViewOptions.showConsults) res.push('Consults');
-      if (state.activityViewOptions.showClinic) res.push('Clinic');
-      if (state.activityViewOptions.showProcedure) res.push('Procedure');
-      if (state.activityViewOptions.showNCT) res.push('NCT');
-      if (state.activityViewOptions.showOther) res.push('Other');
-      return res;
-    },
-
-    filteredActivities(state) {
-      return state.activities.filter(
-        (activity) => {
-          if (activity.type) {
-            if (this.visibleActivities.includes(activity.type)) return true;
-            else return false;
-          }
-          return true;
-        }
-        // activity.type && this.visibleActivities.includes(activity.type)
-      );
-    },
 
     isUserSignedIn() {
       return !!getAuth().currentUser;
@@ -181,9 +137,12 @@ export const useStore = defineStore('main', {
         this.numWeeks = differenceInWeeks(nextFirstMonday, this.startDate);
       } else this.numWeeks = numWeeks;
 
-      this.compileActivities();
-      const smos = useSMOStore();
-      smos.compile(this.dates);
+      const activityStore = useActivityStore();
+      activityStore.compile(this.startDate, this.endDate);
+
+      const smoStore = useSMOStore();
+      smoStore.compile(this.dates);
+
       this.compiled = true;
     },
     setPrevMonth() {
@@ -203,15 +162,6 @@ export const useStore = defineStore('main', {
         ...entry,
         version: newVersionName,
       }));
-      //   this.rosterAll.push({
-      //     date: entry.date,
-      //     time: entry.time,
-      //     activity: entry.activity,
-      //     smo: entry.smo,
-      //     notes: entry.notes,
-      //     version: newVersionName,
-      //   });
-      // });
       console.log('Patching new entries');
       this.$patch((state) => {
         state.rosterAll.push(...newEntries);
@@ -225,16 +175,6 @@ export const useStore = defineStore('main', {
     },
     doDeleteVersion() {
       console.log('doDeleteVersion');
-    },
-    compileActivities() {
-      this.activities.forEach((activity, i) => {
-        // console.log('Compiling activity ', activity.name);
-        LoadingBar.increment((i / this.activities.length) * 0.5);
-        activity.allowedDates = {
-          AM: parseRRule(activity.AM, this.startDate, this.endDate),
-          PM: parseRRule(activity.PM, this.startDate, this.endDate),
-        };
-      });
     },
 
     generateNCT() {
@@ -330,85 +270,6 @@ export const useStore = defineStore('main', {
       }
     },
 
-    // /**
-    //  * set activity for date/time/smo, create new roster entry if needed
-    //  */
-    // setRosterEntryActivity(
-    //   date: Date,
-    //   time: Time,
-    //   smoName: string,
-    //   activityName: string
-    // ) {
-    //   const found = this.getRosterAtTime(date, time).find(
-    //     (entry) => entry.smo == smoName
-    //   );
-    //   if (found) {
-    //     found.activity == activityName;
-    //   } else {
-    //     this.rosterAll.push({
-    //       date,
-    //       time,
-    //       smo: smoName,
-    //       activity: activityName,
-    //       notes: '',
-    //       version: this.monthVersion,
-    //     });
-    //   }
-    // },
-
-    // /**
-    //  * set SMO for date/time/smo, create new roster entry if needed
-    //  */
-    // setRosterEntrySMO(
-    //   date: Date,
-    //   time: Time,
-    //   smoName: string,
-    //   activityName: string,
-    //   notes: string
-    // ) {
-    //   const found = this.getRosterAtTime(date, time).find(
-    //     (entry) => entry.activity == activityName
-    //   );
-    //   if (found) {
-    //     found.smo = smoName;
-    //   } else {
-    //     this.rosterAll.push({
-    //       date,
-    //       time,
-    //       smo: smoName,
-    //       activity: activityName,
-    //       notes,
-    //       version: this.monthVersion,
-    //     });
-    //   }
-    // },
-
-    // /**
-    //  * set notes for date/time/smo/activity
-    //  */
-    // setRosterEntryNotes(
-    //   date: Date,
-    //   time: Time,
-    //   smoName: string,
-    //   activityName: string,
-    //   notes: string
-    // ) {
-    //   const found = roster.find(
-    //     (entry) =>
-    //       isSameDay(entry.date, date) &&
-    //       entry.time == time &&
-    //       entry.activity == activityName &&
-    //       entry.smo == smoName
-    //   );
-    //   if (!found) {
-    //     throw new Error(
-    //       `Roster entry already exists for ${date.toString()}:${time} ${smoName}, ${activityName}`
-    //     );
-    //   } else {
-    //     found.notes = notes;
-    //   }
-    // },
-
     /**
      * Delete roster entry date/time/smo/activity
      */
@@ -438,14 +299,6 @@ export const useStore = defineStore('main', {
       return this.holidays.some((x) => isSameDay(x, date));
     },
 
-    getActivity(activityName: string) {
-      const activity = this.activities.find(
-        (activity) => activity.name == activityName
-      );
-      if (!activity) throw new Error(`Activity ${activityName} is not defined`);
-      return activity;
-    },
-
     getActivitySum(activityName: string) {
       return this.roster.filter((entry) => entry.activity == activityName)
         .length;
@@ -462,14 +315,7 @@ export const useStore = defineStore('main', {
     /**
      * Is activity allowed to be scheduled this date and time
      */
-    isAllowedActivity(date: Date, time: Time, activityName: string) {
-      const activity = this.getActivity(activityName);
-      if (!activity.allowedDates)
-        throw new Error('activities are not compiled');
-      return activity.allowedDates[time].some((activityDate) =>
-        isSameDay(activityDate, date)
-      );
-    },
+
     /**
      * Is activity valid at this date time - allowed to be scheduled, within allocation limits
      */
@@ -478,6 +324,8 @@ export const useStore = defineStore('main', {
         answer: true,
         reasons: Array<string>(),
       };
+
+      const activityStore = useActivityStore();
 
       const foundMatches = {
         AM: this.getRosterAtTime(date, 'AM').filter(
@@ -499,7 +347,7 @@ export const useStore = defineStore('main', {
       //   (entry) => entry.time == time
       // );
 
-      const isAllowedActivity = this.isAllowedActivity(
+      const isAllowedActivity = activityStore.isAllowedActivity(
         date,
         time,
         activityName
@@ -514,7 +362,7 @@ export const useStore = defineStore('main', {
           );
       }
 
-      const activity = this.getActivity(activityName);
+      const activity = activityStore.getActivity(activityName);
 
       const getMinMax = (x: [number, number] | number) => {
         return Array.isArray(x) ? x : [x, x];
@@ -559,22 +407,7 @@ export const useStore = defineStore('main', {
       return this.getRosterAtTime(date, time).filter(
         (entry) => entry.smo == smoName && entry.activity != 'Call'
       );
-      // return this.roster.filter(
-      //   (entry) =>
-      //     isSameDay(entry.date, date) &&
-      //     entry.time == time &&
-      //     entry.smo == smoName &&
-      //     entry.activity != 'Call'
-      // );
     },
-
-    /**
-     * Is SMO allowed to be scheduled this date and time
-     */
-
-    /**
-     * Is SMO allowed to be scheduled to this activity
-     */
 
     /**
      * Is SMO already scheduled elsewhere
