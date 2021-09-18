@@ -109,6 +109,7 @@
 import { defineComponent, toRefs, computed, PropType, ref } from 'vue';
 import twoColList from './twoColList.vue';
 import { useStore } from '../stores/store';
+import { useSMOStore } from '../stores/smos';
 import { isSunday, isFriday } from 'date-fns';
 import { Time } from '../stores/store';
 
@@ -137,7 +138,9 @@ export default defineComponent({
   setup(props) {
     const { dateStr, time, smoName, comment } = toRefs(props);
     const date = ref(new Date(dateStr.value));
+
     const store = useStore();
+    const smos = useSMOStore();
 
     const activityMenu = ref(false);
 
@@ -181,8 +184,8 @@ export default defineComponent({
 
     const isHoliday = computed(() => store.isHoliday(date.value));
 
-    const allowedActivities = computed(() =>
-      store.getAllowedActivities(smoName.value)
+    const allowedActivities = computed(
+      () => smos.getSMO(smoName.value).activities
     );
 
     const assignedEntries = computed(() =>
@@ -215,7 +218,7 @@ export default defineComponent({
       if (isHoliday.value) return '';
       const activities = assignedActivities.value;
       if (activities.length == 0) {
-        if (store.isAllowedTimeSMO(date.value, time.value, smoName.value))
+        if (smos.isAllowedTimeSMO(date.value, time.value, smoName.value))
           return '?';
         else return '';
       } else if (activities.length == 1) return activities[0];
@@ -246,7 +249,7 @@ export default defineComponent({
         },
       ];
 
-      if (!store.smoViewOptions.showErrors || isHoliday.value) return classes;
+      if (!smos.viewOptions.showErrors || isHoliday.value) return classes;
 
       const invalidSMO = (myreason: string) =>
         !isValidSMO.value.answer &&

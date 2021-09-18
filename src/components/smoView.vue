@@ -19,32 +19,32 @@
                       >All</q-btn
                     >
                     <q-checkbox
-                      v-model="store.smoViewOptions.showCall"
+                      v-model="smos.viewOptions.showCall"
                       label="Call"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="store.smoViewOptions.showWard"
+                      v-model="smos.viewOptions.showWard"
                       label="Wards"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="store.smoViewOptions.showEMG"
+                      v-model="smos.viewOptions.showEMG"
                       label="EMG"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="store.smoViewOptions.showEEG"
+                      v-model="smos.viewOptions.showEEG"
                       label="EEG"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="store.smoViewOptions.showWDHB"
+                      v-model="smos.viewOptions.showWDHB"
                       label="WDHB"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="store.smoViewOptions.showCDHB"
+                      v-model="smos.viewOptions.showCDHB"
                       label="CMDHB"
                       size="sm"
                     />
@@ -59,7 +59,7 @@
         </tr>
       </thead>
       <tbody>
-        <template v-for="(smo, i) in store.filteredSMOs" :key="i">
+        <template v-for="(smo, i) in smos.filteredSMOs" :key="i">
           <tr :class="`row-${i % 2}`">
             <td>{{ smo.name }}</td>
             <td style="border-right: 2px solid black">AM</td>
@@ -91,6 +91,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { useStore } from '../stores/store';
+import { useSMOStore } from 'src/stores/smos';
 
 import smoCell from './smoCell.vue';
 import { format } from 'date-fns';
@@ -100,17 +101,19 @@ export default defineComponent({
   components: { smoCell },
   setup() {
     const store = useStore();
+    const smos = useSMOStore();
     const showAll = () => {
-      store.smoViewOptions.showEMG = true;
-      store.smoViewOptions.showEEG = true;
-      store.smoViewOptions.showCall = true;
-      store.smoViewOptions.showWard = true;
-      store.smoViewOptions.showWDHB = true;
-      store.smoViewOptions.showCDHB = true;
+      smos.viewOptions.showEMG = true;
+      smos.viewOptions.showEEG = true;
+      smos.viewOptions.showCall = true;
+      smos.viewOptions.showWard = true;
+      smos.viewOptions.showWDHB = true;
+      smos.viewOptions.showCDHB = true;
     };
 
     return {
       store,
+      smos,
       showAll,
       format,
     };

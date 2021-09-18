@@ -83,6 +83,7 @@ import twoColList from './twoColList.vue';
 import { useStore } from '../stores/store';
 import { isSunday, isFriday } from 'date-fns';
 import { Time } from '../stores/store';
+import { useSMOStore } from 'src/stores/smos';
 
 export default defineComponent({
   // name: 'ComponentName'
@@ -104,6 +105,7 @@ export default defineComponent({
   components: { twoColList },
   setup(props) {
     const store = useStore();
+    const smoStore = useSMOStore();
 
     const { dateStr, time, activityName } = toRefs(props);
     const date = ref(new Date(dateStr.value));
@@ -123,8 +125,8 @@ export default defineComponent({
     );
     const isHoliday = computed(() => store.isHoliday(date.value));
 
-    const availableSMOs = computed(() =>
-      store.smos
+    const availableSMOs = computed(() => {
+      return smoStore.smos
         .filter((smo) =>
           store.isAvailableSMO(
             date.value,
@@ -134,11 +136,11 @@ export default defineComponent({
           )
         )
         .map((smo) => smo.name)
-        .filter((smo) => !assignedSMOs.value.includes(smo))
-    );
+        .filter((smo) => !assignedSMOs.value.includes(smo));
+    });
 
-    const unavailableSMOs = computed(() =>
-      store.smos
+    const unavailableSMOs = computed(() => {
+      return smoStore.smos
         .filter((smo) =>
           store.isUnavailableSMO(
             date.value,
@@ -147,16 +149,16 @@ export default defineComponent({
             activityName.value
           )
         )
-        .map((smo) => smo.name)
-    );
+        .map((smo) => smo.name);
+    });
 
-    const incapableSMOs = computed(() =>
-      store.smos
+    const incapableSMOs = computed(() => {
+      return smoStore.smos
         .filter(
-          (smo) => !store.isAllowedActivitySMO(activityName.value, smo.name)
+          (smo) => !smoStore.isAllowedActivitySMO(activityName.value, smo.name)
         )
-        .map((smo) => smo.name)
-    );
+        .map((smo) => smo.name);
+    });
 
     const toggleSMO = (smoName: string) => {
       if (assignedSMOs.value.some((smo) => smo == smoName)) {

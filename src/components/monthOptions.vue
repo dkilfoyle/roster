@@ -179,7 +179,8 @@ import {
   toRefs,
 } from 'vue';
 import { format } from 'date-fns';
-import { useStore, getFirstMonday } from '../stores/store';
+import { useStore } from '../stores/store';
+import { getFirstMonday } from '../stores/utils';
 
 export default defineComponent({
   // name: 'ComponentName'

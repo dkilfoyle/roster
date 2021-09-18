@@ -2,7 +2,7 @@
   <div class="column q-pb-md">
     <q-item-section>
       <q-checkbox
-        v-model="store.smoViewOptions.showErrors"
+        v-model="smos.viewOptions.showErrors"
         label="Show Errors"
         size="sm"
       />
@@ -11,13 +11,13 @@
 </template>
 
 <script lang="ts">
+import { useSMOStore } from 'src/stores/smos';
 import { defineComponent } from 'vue';
-import { useStore } from '../stores/store';
 export default defineComponent({
   // name: 'ComponentName'
   setup() {
-    const store = useStore();
-    return { store };
+    const smos = useSMOStore();
+    return { smos };
   },
 });
 </script>

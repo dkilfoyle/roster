@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia';
+import { useSMOStore } from './smos';
+
 import {
   roster as rosterRaw,
   RosterEntry,
   SearchRosterEntry,
   SetRosterEntry,
 } from './roster';
-import { smos } from './smos';
 import { activities } from './activities';
 import { holidays } from './holidays';
 
@@ -24,13 +25,16 @@ import {
   addDays,
   eachDayOfInterval,
   format,
-  // isSameDay,
   isWeekend,
-  isMonday,
-  nextMonday,
   differenceInWeeks,
-  eachWeekOfInterval,
 } from 'date-fns';
+
+import {
+  getEntryTimestamp,
+  getFirstMonday,
+  isSameDay,
+  parseRRule,
+} from './utils';
 
 import { LoadingBar } from 'quasar';
 LoadingBar.setDefaults({
@@ -40,30 +44,7 @@ LoadingBar.setDefaults({
 });
 
 type RosterLookup = Record<string, Array<RosterEntry>>;
-
-const isSameDay = (d1: Date, d2: Date) => {
-  return (
-    d1.getDate() == d2.getDate() &&
-    d1.getMonth() == d2.getMonth() &&
-    d1.getFullYear() == d2.getFullYear()
-  );
-  // return d1.getTime() == d2.getTime();
-};
-
-const getEntryTimestamp = (date: Date, time: string) => {
-  return `${date.getFullYear()}${date
-    .getMonth()
-    .toString()
-    .padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}${time}`;
-};
-
 export type Time = 'AM' | 'PM';
-
-export const getFirstMonday = (year: number, month: number) => {
-  const d = new Date(year, month, 1, 0, 0, 0, 0);
-  if (isMonday(d)) return d;
-  else return nextMonday(d);
-};
 
 export const useStore = defineStore('main', {
   state: () => ({
@@ -73,7 +54,6 @@ export const useStore = defineStore('main', {
     numWeeks: 1,
     showWeekend: false,
     rosterAll: rosterRaw,
-    smos,
     activities,
     compiled: false,
     holidays,
@@ -88,16 +68,6 @@ export const useStore = defineStore('main', {
       showProcedure: true,
       showConsults: true,
       showNCT: true,
-    },
-    smoViewOptions: {
-      showErrors: true,
-      showSummary: true,
-      showEMG: true,
-      showEEG: true,
-      showCall: true,
-      showWard: true,
-      showWDHB: true,
-      showCDHB: true,
     },
     user: '',
   }),
@@ -147,26 +117,6 @@ export const useStore = defineStore('main', {
       }).filter((date) => state.showWeekend || !isWeekend(date));
     },
     activityNames: (state) => state.activities.map((activity) => activity.name),
-
-    visibleSMOs(state): Array<string> {
-      const res: Array<string> = [];
-      if (state.smoViewOptions.showCDHB) res.push('MMH');
-      if (state.smoViewOptions.showWDHB) res.push(...['NSH', 'WTH']);
-      if (state.smoViewOptions.showWard) res.push(...['Neuro', 'Stroke']);
-      if (state.smoViewOptions.showEMG) res.push('EMG');
-      if (state.smoViewOptions.showEEG) res.push('EEG');
-      if (state.smoViewOptions.showCall) res.push('Call');
-      return res;
-    },
-
-    filteredSMOs(state) {
-      return state.smos.filter((smo) =>
-        smo.activities.some((activity) => {
-          if (this.visibleSMOs.includes(activity)) return true;
-          else return false;
-        })
-      );
-    },
 
     visibleActivities(state) {
       const res: Array<string> = [];
@@ -221,7 +171,6 @@ export const useStore = defineStore('main', {
     },
     setMonth(year: number, month: number, numWeeks?: number) {
       // console.log('setMonth', year, month, numWeeks);
-      LoadingBar.start();
       this.startDate = getFirstMonday(year, month);
 
       if (typeof numWeeks == 'undefined') {
@@ -233,9 +182,9 @@ export const useStore = defineStore('main', {
       } else this.numWeeks = numWeeks;
 
       this.compileActivities();
-      this.compileSMOs();
+      const smos = useSMOStore();
+      smos.compile(this.dates);
       this.compiled = true;
-      LoadingBar.stop();
     },
     setPrevMonth() {
       const year = this.startDate.getFullYear();
@@ -282,106 +231,30 @@ export const useStore = defineStore('main', {
         // console.log('Compiling activity ', activity.name);
         LoadingBar.increment((i / this.activities.length) * 0.5);
         activity.allowedDates = {
-          AM: this.parseRRule(activity.AM),
-          PM: this.parseRRule(activity.PM),
+          AM: parseRRule(activity.AM, this.startDate, this.endDate),
+          PM: parseRRule(activity.PM, this.startDate, this.endDate),
         };
       });
     },
-    compileSMOs() {
-      this.smos.forEach((smo, i) => {
-        // console.log('Compiling smo ', smo.name);
-        LoadingBar.increment((i / this.smos.length) * 0.5);
 
-        smo.allowedDates = {
-          AM: [...this.dates],
-          PM: [...this.dates],
-        };
-        smo.NCT.forEach((nct) => {
-          const amNCTDates = this.parseRRule(nct.AM);
-          const pmNCTDates = this.parseRRule(nct.PM);
-
-          // remove each NCT date from allowedDates
-          amNCTDates.forEach((amNCTDate) => {
-            const index = smo.allowedDates?.AM.findIndex((date) =>
-              isSameDay(date, amNCTDate)
-            );
-            if (typeof index != 'undefined' && index > -1) {
-              smo.allowedDates?.AM.splice(index, 1);
-            }
-          });
-          pmNCTDates.forEach((pmNCTDate) => {
-            const index = smo.allowedDates?.PM.findIndex((date) =>
-              isSameDay(date, pmNCTDate)
-            );
-            if (typeof index != 'undefined' && index > -1)
-              smo.allowedDates?.PM.splice(index, 1);
-          });
-        });
-      });
-    },
     generateNCT() {
       // run only when creating new month otherwise
       console.log(
         'Warning: compile SMOs will reset any existing NCT times back to NCT default'
       );
-      this.smos.forEach((smo) => {
-        smo.NCT.forEach((nct) => {
-          this.parseRRule(nct.AM).forEach((date) =>
-            this.setRosterEntry(
-              { date, time: 'AM', smo: smo.name },
-              { activity: nct.name }
-            )
-          );
-          this.parseRRule(nct.PM).forEach((date) =>
-            this.setRosterEntry(
-              { date, time: 'PM', smo: smo.name },
-              { activity: nct.name }
-            )
-          );
-        });
+      const smos = useSMOStore();
+      smos.getNCTEntries(this.startDate, this.endDate).forEach((entry) => {
+        this.setRosterEntry(
+          {
+            date: entry.date,
+            time: entry.time,
+            smo: entry.smo,
+          },
+          {
+            activity: entry.activity,
+          }
+        );
       });
-    },
-    parseRRule(rule: string) {
-      if (rule == '') return [];
-
-      const days = Array<number>();
-      const r = rule.toLowerCase();
-
-      if (r == 'every weekday') {
-        days.push(...[1, 2, 3, 4, 5]);
-      } else if (r == 'every day') {
-        days.push(...[0, 1, 2, 3, 4, 5, 6]);
-      } else {
-        if (r.includes('sunday')) days.push(0);
-        if (r.includes('monday')) days.push(1);
-        if (r.includes('tuesday')) days.push(2);
-        if (r.includes('wednesday')) days.push(3);
-        if (r.includes('thursday')) days.push(4);
-        if (r.includes('friday')) days.push(5);
-        if (r.includes('saturday')) days.push(6);
-      }
-
-      const interval = { start: this.startDate, end: this.endDate };
-      const dates = Array<Date>();
-      days.forEach((day) =>
-        dates.push(
-          ...eachWeekOfInterval(interval, {
-            weekStartsOn: day as 0 | 1 | 2 | 3 | 4 | 5 | 6,
-          })
-        )
-      );
-
-      return dates;
-
-      // const r = RRule.fromText(rule);
-      // r.options.dtstart = new Date('2010-01-01');
-      // const dates = r.between(this.startDate, this.endDate, true);
-      // dates.forEach((date) => {
-      //   date.setHours(0);
-      //   date.setMinutes(0);
-      // });
-      // return dates;
-      // .map((date) => subDays(date, 1));
     },
 
     getRosterAtTime(date: Date, time: string) {
@@ -572,11 +445,6 @@ export const useStore = defineStore('main', {
       if (!activity) throw new Error(`Activity ${activityName} is not defined`);
       return activity;
     },
-    getSMO(smoName: string) {
-      const activity = this.smos.find((smo) => smo.name == smoName);
-      if (!activity) throw new Error(`Activity ${smoName} is not defined`);
-      return activity;
-    },
 
     getActivitySum(activityName: string) {
       return this.roster.filter((entry) => entry.activity == activityName)
@@ -589,12 +457,6 @@ export const useStore = defineStore('main', {
       return this.getRosterAtTime(date, time).filter(
         (entry) => entry.activity == activityName
       );
-    },
-    getAllowedSMOs(date: Date, activityName: string) {
-      return this.smos.filter((smo) => {
-        if (smo.endDate && date > smo.endDate) return false;
-        return smo.activities.includes(activityName);
-      });
     },
 
     /**
@@ -705,26 +567,14 @@ export const useStore = defineStore('main', {
       //     entry.activity != 'Call'
       // );
     },
-    getAllowedActivities(smoName: string) {
-      return this.getSMO(smoName).activities;
-    },
 
     /**
      * Is SMO allowed to be scheduled this date and time
      */
-    isAllowedTimeSMO(date: Date, time: Time, smoName: string) {
-      const smo = this.getSMO(smoName);
-      if (!smo.allowedDates)
-        throw new Error('allowed smo dates are not compiled');
-      return smo.allowedDates[time].some((smoDate) => isSameDay(smoDate, date));
-    },
 
     /**
      * Is SMO allowed to be scheduled to this activity
      */
-    isAllowedActivitySMO(activityName: string, smoName: string) {
-      return this.getAllowedActivities(smoName).includes(activityName);
-    },
 
     /**
      * Is SMO already scheduled elsewhere
@@ -741,8 +591,9 @@ export const useStore = defineStore('main', {
     },
 
     isAvailableCallSMO(date: Date, time: Time, smoName: string) {
+      const smos = useSMOStore();
       return (
-        this.isAllowedActivitySMO('Call', smoName) &&
+        smos.isAllowedActivitySMO('Call', smoName) &&
         !(
           this.isOnLeaveSMO(date, smoName) ||
           this.isOnLeaveSMO(addDays(date, 1), smoName)
@@ -759,12 +610,13 @@ export const useStore = defineStore('main', {
       smoName: string,
       activityName: string
     ) {
+      const smos = useSMOStore();
       if (activityName == 'Call')
         return this.isAvailableCallSMO(date, time, smoName);
       else
         return (
-          this.isAllowedActivitySMO(activityName, smoName) &&
-          this.isAllowedTimeSMO(date, time, smoName) &&
+          smos.isAllowedActivitySMO(activityName, smoName) &&
+          smos.isAllowedTimeSMO(date, time, smoName) &&
           !this.isAssignedSMO(date, time, smoName)
         );
     },
@@ -778,16 +630,17 @@ export const useStore = defineStore('main', {
       smoName: string,
       activityName: string
     ) {
+      const smos = useSMOStore();
       if (activityName == 'Call')
         return (
-          this.isAllowedActivitySMO('Call', smoName) &&
+          smos.isAllowedActivitySMO('Call', smoName) &&
           (this.isOnLeaveSMO(date, smoName) ||
             this.isOnLeaveSMO(addDays(date, 1), smoName))
         );
       else
         return (
-          this.isAllowedActivitySMO(activityName, smoName) &&
-          (!this.isAllowedTimeSMO(date, time, smoName) ||
+          smos.isAllowedActivitySMO(activityName, smoName) &&
+          (!smos.isAllowedTimeSMO(date, time, smoName) ||
             this.isAssignedSMO(date, time, smoName))
         );
     },
@@ -796,6 +649,7 @@ export const useStore = defineStore('main', {
      * Is smo valid at this date time - allowed to be scheduled, not already scheduled elsewhere
      */
     isValidSMO(date: Date, time: Time, smoName: string) {
+      const smos = useSMOStore();
       const result = {
         answer: true,
         reasons: Array<string>(),
@@ -815,20 +669,20 @@ export const useStore = defineStore('main', {
             .join(',')}`
         );
       } else if (assignedActivities.length == 0) {
-        if (this.isAllowedTimeSMO(date, time, smoName))
+        if (smos.isAllowedTimeSMO(date, time, smoName))
           result.reasons.push(`${smoName} awaiting assignment`);
       } else {
         // foundTimeMatches.length == 1
         const activityName = assignedActivities[0].activity;
         if (
-          !this.isAllowedTimeSMO(date, time, smoName) &&
+          !smos.isAllowedTimeSMO(date, time, smoName) &&
           !['NCT', 'WDHB', 'CDHB', 'UNI'].includes(activityName)
         ) {
           result.reasons.push(`${smoName} is not contracted`);
         }
 
         if (
-          !this.isAllowedActivitySMO(assignedActivities[0].activity, smoName)
+          !smos.isAllowedActivitySMO(assignedActivities[0].activity, smoName)
         ) {
           result.reasons.push(
             `${assignedActivities[0].activity} is not an allowed activity for ${smoName}`
