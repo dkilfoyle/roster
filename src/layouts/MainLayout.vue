@@ -19,7 +19,7 @@
           </div>
         </div>
 
-        <div class="col" style="text-align: center">
+        <div class="col row justify-center" style="text-align: center">
           <q-btn
             flat
             round
@@ -27,7 +27,19 @@
             @click="store.setPrevMonth"
             icon="navigate_before"
           ></q-btn>
-          {{ store.monthName }}
+          <div class="column col-auto justify-center">
+            <div class="col-auto" style="color: cyan">
+              {{ store.monthName }}
+            </div>
+            <div
+              class="col"
+              v-if="store.monthVersion != 'Final'"
+              style="color: greenyellow"
+            >
+              {{ store.monthVersion }}
+            </div>
+          </div>
+
           <q-btn
             flat
             round
@@ -52,8 +64,9 @@
     </q-header>
 
     <q-drawer v-model="leftDrawerOpen" side="left" bordered class="bg-grey-1">
-      <q-list dense>
+      <q-list bordered dense>
         <q-expansion-item
+          default-opened
           label="Month"
           :content-inset-level="0.5"
           expand-separator

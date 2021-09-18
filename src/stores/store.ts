@@ -1,5 +1,10 @@
 import { defineStore } from 'pinia';
-import { roster, RosterEntry } from './roster';
+import {
+  roster as rosterRaw,
+  RosterEntry,
+  SearchRosterEntry,
+  SetRosterEntry,
+} from './roster';
 import { smos } from './smos';
 import { activities } from './activities';
 import { holidays } from './holidays';
@@ -62,13 +67,12 @@ export const getFirstMonday = (year: number, month: number) => {
 
 export const useStore = defineStore('main', {
   state: () => ({
-    version: '0.1',
-    monthVersion: 'final',
+    monthVersion: 'Final',
     firebaseApp: null as FirebaseApp | null,
     startDate: getFirstMonday(new Date().getFullYear(), new Date().getMonth()),
     numWeeks: 1,
     showWeekend: false,
-    rosterAll: roster,
+    rosterAll: rosterRaw,
     smos,
     activities,
     compiled: false,
@@ -101,11 +105,16 @@ export const useStore = defineStore('main', {
     monthName: (state) => {
       return format(state.startDate, 'MMM yyyy');
     },
+    isArchived(): boolean {
+      return this.endDate < new Date();
+    },
     roster(state): Array<RosterEntry> {
       return state.compiled
         ? state.rosterAll.filter(
             (entry) =>
-              entry.date >= state.startDate && entry.date <= this.endDate
+              entry.date >= state.startDate &&
+              entry.date <= this.endDate &&
+              entry.version == state.monthVersion
           )
         : [];
     },
@@ -117,6 +126,19 @@ export const useStore = defineStore('main', {
         return lookupTable;
       }, <RosterLookup>{});
     },
+
+    rosterVersions(): Array<string> {
+      return this.rosterAll.reduce((versions, entry) => {
+        if (
+          entry.date >= this.startDate &&
+          entry.date <= this.endDate &&
+          !versions.includes(entry.version)
+        )
+          versions.push(entry.version);
+        return versions;
+      }, Array<string>());
+    },
+
     endDate: (state) => addDays(state.startDate, state.numWeeks * 7 - 1),
     dates(state): Array<Date> {
       return eachDayOfInterval({
@@ -225,6 +247,36 @@ export const useStore = defineStore('main', {
       const month = this.startDate.getMonth();
       this.setMonth(month == 11 ? year + 1 : year, month == 11 ? 0 : month + 1);
     },
+    doCreateVersion(newVersionName: string) {
+      console.log('doCreateVersion', newVersionName);
+      console.log('Creating new entries');
+      const newEntries = this.roster.map((entry) => ({
+        ...entry,
+        version: newVersionName,
+      }));
+      //   this.rosterAll.push({
+      //     date: entry.date,
+      //     time: entry.time,
+      //     activity: entry.activity,
+      //     smo: entry.smo,
+      //     notes: entry.notes,
+      //     version: newVersionName,
+      //   });
+      // });
+      console.log('Patching new entries');
+      this.$patch((state) => {
+        state.rosterAll.push(...newEntries);
+      });
+      console.log('Done');
+
+      this.monthVersion = newVersionName;
+    },
+    doFinaliseVersion() {
+      console.log('doFinaliseVersion');
+    },
+    doDeleteVersion() {
+      console.log('doDeleteVersion');
+    },
     compileActivities() {
       this.activities.forEach((activity, i) => {
         // console.log('Compiling activity ', activity.name);
@@ -275,10 +327,16 @@ export const useStore = defineStore('main', {
       this.smos.forEach((smo) => {
         smo.NCT.forEach((nct) => {
           this.parseRRule(nct.AM).forEach((date) =>
-            this.setRosterEntryActivity(date, 'AM', smo.name, nct.name)
+            this.setRosterEntry(
+              { date, time: 'AM', smo: smo.name },
+              { activity: nct.name }
+            )
           );
           this.parseRRule(nct.PM).forEach((date) =>
-            this.setRosterEntryActivity(date, 'PM', smo.name, nct.name)
+            this.setRosterEntry(
+              { date, time: 'PM', smo: smo.name },
+              { activity: nct.name }
+            )
           );
         });
       });
@@ -340,12 +398,8 @@ export const useStore = defineStore('main', {
       smoName: string,
       activityName: string
     ) {
-      const found = roster.find(
-        (entry) =>
-          isSameDay(entry.date, date) &&
-          entry.time == time &&
-          entry.smo == smoName &&
-          entry.activity == activityName
+      const found = this.getRosterAtTime(date, time).find(
+        (entry) => entry.smo == smoName && entry.activity == activityName
       );
       if (found) {
         throw new Error(
@@ -364,89 +418,123 @@ export const useStore = defineStore('main', {
     },
 
     /**
-     * set activity for date/time/smo, create new roster entry if needed
+     * Set the entry specificed by searchEntry to the values specified in setEntry, if searchEntry not matched create a new entry
+     * @param searchEntry
+     * @param setEntry
      */
-    setRosterEntryActivity(
-      date: Date,
-      time: Time,
-      smoName: string,
-      activityName: string
-    ) {
-      const found = roster.find(
-        (entry) =>
-          isSameDay(entry.date, date) &&
-          entry.time == time &&
-          entry.smo == smoName
-      );
-      if (found) {
-        found.activity == activityName;
-      } else {
-        this.rosterAll.push({
-          date,
-          time,
-          smo: smoName,
-          activity: activityName,
-          notes: '',
-          version: this.monthVersion,
-        });
-      }
-    },
-
-    /**
-     * set SMO for date/time/smo, create new roster entry if needed
-     */
-    setRosterEntrySMO(
-      date: Date,
-      time: Time,
-      smoName: string,
-      activityName: string,
-      notes: string
-    ) {
-      const found = roster.find(
-        (entry) =>
-          isSameDay(entry.date, date) &&
-          entry.time == time &&
-          entry.activity == activityName
-      );
-      if (found) {
-        found.smo = smoName;
-      } else {
-        this.rosterAll.push({
-          date,
-          time,
-          smo: smoName,
-          activity: activityName,
-          notes,
-          version: this.monthVersion,
-        });
-      }
-    },
-
-    /**
-     * set notes for date/time/smo/activity
-     */
-    setRosterEntryNotes(
-      date: Date,
-      time: Time,
-      smoName: string,
-      activityName: string,
-      notes: string
-    ) {
-      const found = roster.find(
-        (entry) =>
-          isSameDay(entry.date, date) &&
-          entry.time == time &&
-          entry.activity == activityName &&
-          entry.smo == smoName
-      );
-      if (!found) {
-        throw new Error(
-          `Roster entry already exists for ${date.toString()}:${time} ${smoName}, ${activityName}`
+    setRosterEntry(searchEntry: SearchRosterEntry, setEntry: SetRosterEntry) {
+      if (!searchEntry.smo && !searchEntry.activity)
+        throw new Error('searchEntry must include either smo or activity');
+      const found = this.getRosterAtTime(
+        searchEntry.date,
+        searchEntry.time
+      ).find((entry) => {
+        return (
+          (searchEntry.activity
+            ? entry.activity == searchEntry.activity
+            : true) && (searchEntry.smo ? entry.smo == searchEntry.smo : true)
         );
+      });
+      if (found) {
+        if (setEntry.smo) found.smo = setEntry.smo;
+        if (setEntry.activity) found.activity = setEntry.activity;
+        if (setEntry.notes) found.notes = setEntry.notes;
       } else {
-        found.notes = notes;
+        const smo = searchEntry.smo || setEntry.smo;
+        if (!smo) throw new Error('smo must be in searchEntry and/or setEntry');
+        const activity = searchEntry.activity || setEntry.activity;
+        if (!activity)
+          throw new Error('activity must be in searchEntry and/or setEntry');
+
+        this.rosterAll.push({
+          date: searchEntry.date,
+          time: searchEntry.time,
+          smo,
+          activity,
+          notes: setEntry.notes ? setEntry.notes : '',
+          version: this.monthVersion,
+        });
       }
     },
+
+    // /**
+    //  * set activity for date/time/smo, create new roster entry if needed
+    //  */
+    // setRosterEntryActivity(
+    //   date: Date,
+    //   time: Time,
+    //   smoName: string,
+    //   activityName: string
+    // ) {
+    //   const found = this.getRosterAtTime(date, time).find(
+    //     (entry) => entry.smo == smoName
+    //   );
+    //   if (found) {
+    //     found.activity == activityName;
+    //   } else {
+    //     this.rosterAll.push({
+    //       date,
+    //       time,
+    //       smo: smoName,
+    //       activity: activityName,
+    //       notes: '',
+    //       version: this.monthVersion,
+    //     });
+    //   }
+    // },
+
+    // /**
+    //  * set SMO for date/time/smo, create new roster entry if needed
+    //  */
+    // setRosterEntrySMO(
+    //   date: Date,
+    //   time: Time,
+    //   smoName: string,
+    //   activityName: string,
+    //   notes: string
+    // ) {
+    //   const found = this.getRosterAtTime(date, time).find(
+    //     (entry) => entry.activity == activityName
+    //   );
+    //   if (found) {
+    //     found.smo = smoName;
+    //   } else {
+    //     this.rosterAll.push({
+    //       date,
+    //       time,
+    //       smo: smoName,
+    //       activity: activityName,
+    //       notes,
+    //       version: this.monthVersion,
+    //     });
+    //   }
+    // },
+
+    // /**
+    //  * set notes for date/time/smo/activity
+    //  */
+    // setRosterEntryNotes(
+    //   date: Date,
+    //   time: Time,
+    //   smoName: string,
+    //   activityName: string,
+    //   notes: string
+    // ) {
+    //   const found = roster.find(
+    //     (entry) =>
+    //       isSameDay(entry.date, date) &&
+    //       entry.time == time &&
+    //       entry.activity == activityName &&
+    //       entry.smo == smoName
+    //   );
+    //   if (!found) {
+    //     throw new Error(
+    //       `Roster entry already exists for ${date.toString()}:${time} ${smoName}, ${activityName}`
+    //     );
+    //   } else {
+    //     found.notes = notes;
+    //   }
+    // },
 
     /**
      * Delete roster entry date/time/smo/activity
@@ -457,7 +545,7 @@ export const useStore = defineStore('main', {
       smoName: string,
       activityName: string
     ) {
-      const foundIndex = roster.findIndex(
+      const foundIndex = this.rosterAll.findIndex(
         (entry) =>
           isSameDay(entry.date, date) &&
           entry.time == time &&

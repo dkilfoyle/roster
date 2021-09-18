@@ -1,6 +1,6 @@
 <template>
   <td :class="tdClasses">
-    <q-menu style="min-height: 300px">
+    <q-menu style="min-height: 300px" v-model="smoPopup">
       <div class="text-center q-pa-md bg-info q-mb-sm">
         {{ activityName }} on {{ dateStr }}
       </div>
@@ -108,6 +108,7 @@ export default defineComponent({
     const { dateStr, time, activityName } = toRefs(props);
     const date = ref(new Date(dateStr.value));
     const cellTab = ref('available');
+    const smoPopup = ref(false);
 
     const assignedSMOs = computed(() =>
       store
@@ -166,12 +167,15 @@ export default defineComponent({
           activityName.value
         );
       } else
-        store.setRosterEntryActivity(
-          date.value,
-          time.value,
-          smoName,
-          activityName.value
+        store.setRosterEntry(
+          {
+            date: date.value,
+            time: time.value,
+            activity: activityName.value,
+          },
+          { smo: smoName }
         );
+      smoPopup.value = false;
     };
 
     const tdContent = computed(() => {
@@ -218,6 +222,7 @@ export default defineComponent({
 
     return {
       cellTab,
+      smoPopup,
       isValidActivity,
       isAllowedActivity,
       assignedSMOs,

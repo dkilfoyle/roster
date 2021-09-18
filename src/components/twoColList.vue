@@ -6,7 +6,6 @@
           v-for="(item, i) in items.slice(0, Math.ceil(items.length / 2))"
           :key="i"
           clickable
-          v-close-popup
           @click="toggleItem(i)"
         >
           <q-item-section>{{ item }}</q-item-section>
@@ -14,7 +13,7 @@
       </q-list>
     </div>
     <div class="col">
-      <q-list dense>
+      <q-list dense v-if="items.length > 1">
         <q-item
           v-for="(item, i) in items.slice(
             Math.ceil(items.length / 2),
@@ -22,7 +21,6 @@
           )"
           :key="i"
           clickable
-          v-close-popup
           @click="toggleItem(Math.ceil(items.length / 2) + i)"
         >
           <q-item-section>{{ item }}</q-item-section>

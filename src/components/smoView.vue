@@ -89,7 +89,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch } from 'vue';
+import { defineComponent } from 'vue';
 import { useStore } from '../stores/store';
 
 import smoCell from './smoCell.vue';

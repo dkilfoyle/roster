@@ -9,6 +9,18 @@ export interface RosterEntry {
   version: string;
 }
 
+export interface SearchRosterEntry {
+  date: Date;
+  time: Time;
+  activity?: string;
+  smo?: string;
+}
+export interface SetRosterEntry {
+  activity?: string;
+  smo?: string;
+  notes?: string;
+}
+
 import rosterData from '../../rosters/roster.json';
 // rosterData.forEach((entry) => (entry.date = new Date(entry.date)));
 
@@ -18,7 +30,7 @@ export const roster: Array<RosterEntry> = rosterData.map((entry) => ({
   smo: entry.smo,
   activity: entry.activity,
   notes: '',
-  version: '',
+  version: 'Final',
 }));
 // [
 //   { date: new Date('2021-10-05'), time: 'AM', activity: 'Neuro', smo: 'DK' },

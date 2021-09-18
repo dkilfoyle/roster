@@ -21,7 +21,7 @@
         </q-card-actions>
       </q-card>
     </q-menu>
-    <q-menu style="min-height: 300px">
+    <q-menu style="min-height: 300px" v-model="activityMenu">
       <div class="text-center q-pa-md bg-info q-mb-sm">
         {{ smoName }} on {{ dateStr }}
       </div>
@@ -139,15 +139,19 @@ export default defineComponent({
     const date = ref(new Date(dateStr.value));
     const store = useStore();
 
+    const activityMenu = ref(false);
+
     const mycomment = ref(comment.value);
     const setComment = () => {
       assignedActivities.value.forEach((activity) =>
-        store.setRosterEntrySMO(
-          date.value,
-          time.value,
-          smoName.value,
-          activity,
-          mycomment.value
+        store.setRosterEntry(
+          {
+            date: date.value,
+            time: time.value,
+            smo: smoName.value,
+            activity: activity,
+          },
+          { notes: mycomment.value }
         )
       );
     };
@@ -164,13 +168,15 @@ export default defineComponent({
           activityName
         );
       } else
-        store.setRosterEntrySMO(
-          date.value,
-          time.value,
-          smoName.value,
-          activityName,
-          ''
+        store.setRosterEntry(
+          {
+            date: date.value,
+            time: time.value,
+            smo: smoName.value,
+          },
+          { activity: activityName }
         );
+      activityMenu.value = false;
     };
 
     const isHoliday = computed(() => store.isHoliday(date.value));
@@ -260,6 +266,7 @@ export default defineComponent({
       mycomment,
       setComment,
       cellTab,
+      activityMenu,
       toggleActivity,
       assignedEntries,
       availableActivities,
