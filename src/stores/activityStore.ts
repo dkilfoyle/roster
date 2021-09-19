@@ -1,11 +1,23 @@
 import { defineStore } from 'pinia';
-import { activityData } from './data/activityData';
+// import { activityData } from './data/activityData';
 import { ActivityDefinition, Time } from './models';
 import { parseRRule, isSameDay } from './utils';
 
+import { query, collection, getFirestore, getDocs } from 'firebase/firestore';
+
+// Export as JSON
+// console.log(
+//   JSON.stringify({
+//     activities: activityData.reduce((acc, curr) => {
+//       acc[curr.name] = curr;
+//       return acc;
+//     }, {} as Record<string, ActivityDefinition>),
+//   })
+// );
+
 export const useActivityStore = defineStore('activity', {
   state: () => ({
-    activities: activityData,
+    activities: Array<ActivityDefinition>(),
     viewOptions: {
       showErrors: true,
       showSummary: true,
@@ -51,6 +63,17 @@ export const useActivityStore = defineStore('activity', {
     },
   },
   actions: {
+    async loadFromFirestore(): Promise<void> {
+      const q = query(collection(getFirestore(), 'activities'));
+      const qss = await getDocs(q);
+      const loadacts = Array<ActivityDefinition>();
+      qss.forEach((doc) => {
+        loadacts.push(doc.data() as ActivityDefinition);
+      });
+      this.activities = loadacts;
+      console.log('Loaded activities', this.activities.length);
+    },
+
     getActivity(activityName: string): ActivityDefinition {
       const activity = this.activities.find(
         (activity) => activity.name == activityName

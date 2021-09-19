@@ -106,6 +106,12 @@ export const useStore = defineStore('main', {
         Notify.create({ message: `Logged in ${e.displayName || 'unknown'}` });
         const smoStore = useSMOStore();
         await smoStore.loadFromFirestore();
+        const activityStore = useActivityStore();
+        await activityStore.loadFromFirestore();
+        Notify.create({
+          message: `Loaded ${smoStore.smos.length} smos, ${activityStore.activities.length} activities`,
+        });
+
         this.setMonth(new Date().getFullYear(), new Date().getMonth());
       }
       console.log('Set user', e);
