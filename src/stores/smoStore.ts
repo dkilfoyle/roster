@@ -1,25 +1,32 @@
 import { defineStore } from 'pinia';
-import { ActivityDefinition } from './activities';
-import { RosterEntry, Time } from './roster';
-import { smoData } from './data/smoData';
+import { RosterEntry, SMODefinition, Time } from './models';
+// import { smoData } from './data/smoData';
 
 import { parseRRule, isSameDay } from './utils';
 
-export interface SMODefinition {
-  name: string;
-  fullName: string;
-  endDate: Date | null;
-  activities: Array<string>;
-  NCT: Array<ActivityDefinition>;
-  allowedDates?: {
-    AM: Array<Date>;
-    PM: Array<Date>;
-  };
-}
+import {
+  query,
+  collection,
+  getFirestore,
+  // onSnapshot,
+  // QuerySnapshot,
+  // DocumentData,
+  getDocs,
+} from 'firebase/firestore';
+
+// Export as JSON
+// console.log(
+//   JSON.stringify({
+//     smos: smoData.reduce((acc, curr) => {
+//       acc[curr.name] = curr;
+//       return acc;
+//     }, {} as Record<string, SMODefinition>),
+//   })
+// );
 
 export const useSMOStore = defineStore('smo', {
   state: () => ({
-    smos: smoData,
+    smos: [] as Array<SMODefinition>,
     viewOptions: {
       showErrors: true,
       showSummary: true,
@@ -43,7 +50,7 @@ export const useSMOStore = defineStore('smo', {
       return res;
     },
 
-    filteredSMOs(state) {
+    filteredSMOs(state): Array<SMODefinition> {
       return state.smos.filter((smo) =>
         smo.activities.some((activity) => {
           if (this.visibleSMOs.includes(activity)) return true;
@@ -51,8 +58,30 @@ export const useSMOStore = defineStore('smo', {
         })
       );
     },
+    filteredSMOs2(): Array<SMODefinition> {
+      return this.filteredSMOs.reduce(
+        (a, i) => a.concat(i, i),
+        Array<SMODefinition>()
+      );
+    },
   },
   actions: {
+    async loadFromFirestore(): Promise<void> {
+      const q = query(collection(getFirestore(), 'smos'));
+      const qss = await getDocs(q);
+      const loadsmos = Array<SMODefinition>();
+      qss.forEach((doc) => {
+        loadsmos.push(doc.data() as SMODefinition);
+      });
+      this.smos = loadsmos;
+      console.log('Loaded smos', this.smos.length);
+      // onSnapshot(mysmos, (snapshot: QuerySnapshot<DocumentData>) => {
+      //   snapshot.docChanges().forEach((change) => {
+      //     if (change.type == 'added')
+      //       this.smos.push(change.doc.data() as SMODefinition);
+      //   });
+      // });
+    },
     getSMO(smoName: string) {
       const smo = this.smos.find((smo) => smo.name == smoName);
       if (!smo) throw new Error(`Activity ${smoName} is not defined`);

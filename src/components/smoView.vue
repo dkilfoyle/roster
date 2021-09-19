@@ -19,32 +19,32 @@
                       >All</q-btn
                     >
                     <q-checkbox
-                      v-model="smos.viewOptions.showCall"
+                      v-model="smoStore.viewOptions.showCall"
                       label="Call"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="smos.viewOptions.showWard"
+                      v-model="smoStore.viewOptions.showWard"
                       label="Wards"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="smos.viewOptions.showEMG"
+                      v-model="smoStore.viewOptions.showEMG"
                       label="EMG"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="smos.viewOptions.showEEG"
+                      v-model="smoStore.viewOptions.showEEG"
                       label="EEG"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="smos.viewOptions.showWDHB"
+                      v-model="smoStore.viewOptions.showWDHB"
                       label="WDHB"
                       size="sm"
                     />
                     <q-checkbox
-                      v-model="smos.viewOptions.showCDHB"
+                      v-model="smoStore.viewOptions.showCDHB"
                       label="CMDHB"
                       size="sm"
                     />
@@ -58,32 +58,24 @@
           </th>
         </tr>
       </thead>
-      <tbody>
-        <template v-for="(smo, i) in smos.filteredSMOs" :key="i">
-          <tr :class="`row-${i % 2}`">
-            <td>{{ smo.name }}</td>
-            <td style="border-right: 2px solid black">AM</td>
-            <smo-cell
-              v-for="date in store.dates"
-              :key="date"
-              :dateStr="date.toDateString()"
-              time="AM"
-              :smoName="smo.name"
-            ></smo-cell>
-          </tr>
-          <tr :class="`row-${i % 2} pm-row`">
-            <td></td>
-            <td style="border-right: 2px solid black">PM</td>
-            <smo-cell
-              v-for="date in store.dates"
-              :key="date"
-              :dateStr="date.toDateString()"
-              time="PM"
-              :smoName="smo.name"
-            ></smo-cell>
-          </tr>
-        </template>
-      </tbody>
+      <transition-group name="smotable" tag="tbody">
+        <tr
+          v-for="(smo, i) in smoStore.filteredSMOs2"
+          :key="smo.name + (i % 2)"
+        >
+          <td>{{ i % 2 ? '' : smo.name }}</td>
+          <td style="border-right: 2px solid black">
+            {{ i % 2 ? 'PM' : 'AM' }}
+          </td>
+          <smo-cell
+            v-for="date in store.dates"
+            :key="date"
+            :dateStr="date.toDateString()"
+            :time="i % 2 ? 'PM' : 'AM'"
+            :smoName="smo.name"
+          ></smo-cell>
+        </tr>
+      </transition-group>
     </q-markup-table>
   </div>
 </template>
@@ -91,7 +83,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue';
 import { useStore } from '../stores/store';
-import { useSMOStore } from 'src/stores/smos';
+import { useSMOStore } from 'src/stores/smoStore';
 
 import smoCell from './smoCell.vue';
 import { format } from 'date-fns';
@@ -101,19 +93,19 @@ export default defineComponent({
   components: { smoCell },
   setup() {
     const store = useStore();
-    const smos = useSMOStore();
+    const smoStore = useSMOStore();
     const showAll = () => {
-      smos.viewOptions.showEMG = true;
-      smos.viewOptions.showEEG = true;
-      smos.viewOptions.showCall = true;
-      smos.viewOptions.showWard = true;
-      smos.viewOptions.showWDHB = true;
-      smos.viewOptions.showCDHB = true;
+      smoStore.viewOptions.showEMG = true;
+      smoStore.viewOptions.showEEG = true;
+      smoStore.viewOptions.showCall = true;
+      smoStore.viewOptions.showWard = true;
+      smoStore.viewOptions.showWDHB = true;
+      smoStore.viewOptions.showCDHB = true;
     };
 
     return {
       store,
-      smos,
+      smoStore,
       showAll,
       format,
     };
@@ -123,4 +115,22 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 @import '../css/calendar.scss';
+
+.sticky-column-table {
+  table {
+    border-bottom: 2px solid black;
+  }
+}
+
+.smotable-enter-active,
+.smotable-leave-active {
+  transition: all 0.3s;
+}
+.smotable-enter-from,
+.smotable-leave-to {
+  opacity: 0;
+}
+.smotable-move {
+  transition: transform 0.3s;
+}
 </style>

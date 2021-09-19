@@ -59,7 +59,7 @@ $orange-4: #ffb74d !default;
 
 .sticky-column-table {
   height: calc(100vh - 50px - 48px);
-
+  cursor: default;
   thead {
     tr:first-child,
     tr:nth-child(2) {
@@ -91,6 +91,7 @@ $orange-4: #ffb74d !default;
   }
 
   tbody {
+    cursor: pointer;
     td:first-child,
     td:nth-child(2) {
       z-index: 2;
@@ -109,6 +110,15 @@ $orange-4: #ffb74d !default;
     td:nth-child(2),
     th:nth-child(2) {
       left: 62px;
+    }
+
+    tr:nth-child(4n),
+    tr:nth-child(4n-1) {
+      background: rgb(255, 255, 255);
+    }
+    tr:nth-child(4n-2),
+    tr:nth-child(4n-3) {
+      background: rgb(238, 238, 238);
     }
   }
 }
@@ -143,12 +153,10 @@ $orange-4: #ffb74d !default;
 
 .row-0 {
   .note:after {
-    background: rgb(238, 238, 238);
   }
 }
 
 .row-1 {
   .note:after {
-    background: rgb(255, 255, 255);
   }
 }

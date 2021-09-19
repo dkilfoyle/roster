@@ -28,6 +28,8 @@ export default boot(
     store.setFirebase(firebaseApp);
 
     // Init auth
-    onAuthStateChanged(getAuth(), (u) => store.setUser(u));
+    onAuthStateChanged(getAuth(), (u) => {
+      void store.setUser(u);
+    });
   }
 );

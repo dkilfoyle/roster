@@ -109,10 +109,10 @@
 import { defineComponent, toRefs, computed, PropType, ref } from 'vue';
 import twoColList from './twoColList.vue';
 import { useStore } from '../stores/store';
-import { useSMOStore } from '../stores/smos';
+import { useSMOStore } from '../stores/smoStore';
 import { isSunday, isFriday } from 'date-fns';
-import { Time } from '../stores/store';
-import { useActivityStore } from 'src/stores/activities';
+import { Time } from '../stores/models';
+import { useActivityStore } from 'src/stores/activityStore';
 
 export default defineComponent({
   // name: 'ComponentName'

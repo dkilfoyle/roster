@@ -17,7 +17,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue';
-import { useActivityStore } from '../stores/activities';
+import { useActivityStore } from '../stores/activityStore';
 export default defineComponent({
   // name: 'ComponentName'
   setup() {

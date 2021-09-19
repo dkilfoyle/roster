@@ -105,7 +105,7 @@
 <script lang="ts">
 import { defineComponent, onBeforeUpdate, onUpdated } from 'vue';
 import { useStore } from '../stores/store';
-import { useActivityStore } from '../stores/activities';
+import { useActivityStore } from '../stores/activityStore';
 
 import activityCell from './activityCell.vue';
 import { format } from 'date-fns';

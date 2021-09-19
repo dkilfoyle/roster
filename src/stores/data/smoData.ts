@@ -1,4 +1,4 @@
-import { SMODefinition } from '../smos';
+import { SMODefinition } from '../models';
 
 const clinics = ['DSR', 'DSC', 'OPC', 'TNP', 'ncFSA', 'FSC', 'SPC', 'PCL'];
 const wards = ['Neuro', 'Stroke'];

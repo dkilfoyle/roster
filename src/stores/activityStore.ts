@@ -1,19 +1,7 @@
-export interface ActivityDefinition {
-  name: string;
-  description?: string;
-  type?: string;
-  AM: string;
-  PM: string;
-  allowedDates?: { AM: Array<Date>; PM: Array<Date> };
-  perDay?: [number, number] | number;
-  perSession?: [number, number] | number;
-  perWeek?: number;
-}
-
 import { defineStore } from 'pinia';
 import { activityData } from './data/activityData';
+import { ActivityDefinition, Time } from './models';
 import { parseRRule, isSameDay } from './utils';
-import { Time } from './store';
 
 export const useActivityStore = defineStore('activity', {
   state: () => ({
@@ -32,7 +20,9 @@ export const useActivityStore = defineStore('activity', {
     },
   }),
   getters: {
-    activityNames: (state) => state.activities.map((activity) => activity.name),
+    activityNames(state): Array<string> {
+      return state.activities.map((activity) => activity.name);
+    },
 
     visibleActivities(state) {
       const res: Array<string> = [];
@@ -47,7 +37,7 @@ export const useActivityStore = defineStore('activity', {
       return res;
     },
 
-    filteredActivities(state) {
+    filteredActivities(state): Array<ActivityDefinition> {
       return state.activities.filter(
         (activity) => {
           if (activity.type) {
@@ -78,7 +68,7 @@ export const useActivityStore = defineStore('activity', {
       );
     },
 
-    compile(startDate: Date, endDate: Date) {
+    compile(startDate: Date, endDate: Date): void {
       this.activities.forEach((activity) => {
         // console.log('Compiling activity ', activity.name);
         activity.allowedDates = {

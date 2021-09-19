@@ -201,7 +201,6 @@ export default defineComponent({
 
     onMounted(() => {
       console.log('monthOptions onMounted setMonth', state.year, state.month);
-      store.setMonth(state.year, state.month);
     });
 
     watch(

@@ -1,25 +1,20 @@
 import { defineStore } from 'pinia';
-import { useSMOStore } from './smos';
-import { useActivityStore } from './activities';
+import { useSMOStore } from './smoStore';
+import { useActivityStore } from './activityStore';
+import { useRosterStore } from './rosterStore';
 
 import {
-  roster as rosterRaw,
   RosterEntry,
   SearchRosterEntry,
   SetRosterEntry,
-} from './roster';
+  RosterLookup,
+  Time,
+} from './models';
+
 import { holidays } from './holidays';
 
 import { FirebaseApp } from 'firebase/app';
 import { User, getAuth } from 'firebase/auth';
-import {
-  query,
-  collection,
-  getFirestore,
-  onSnapshot,
-  QuerySnapshot,
-  DocumentData,
-} from 'firebase/firestore';
 
 import {
   addDays,
@@ -31,15 +26,12 @@ import {
 
 import { getEntryTimestamp, getFirstMonday, isSameDay } from './utils';
 
-import { LoadingBar } from 'quasar';
+import { LoadingBar, Notify } from 'quasar';
 LoadingBar.setDefaults({
   color: 'cyan',
   size: '2px',
   position: 'top',
 });
-
-type RosterLookup = Record<string, Array<RosterEntry>>;
-export type Time = 'AM' | 'PM';
 
 export const useStore = defineStore('main', {
   state: () => ({
@@ -48,7 +40,6 @@ export const useStore = defineStore('main', {
     startDate: getFirstMonday(new Date().getFullYear(), new Date().getMonth()),
     numWeeks: 1,
     showWeekend: false,
-    rosterAll: rosterRaw,
     compiled: false,
     holidays,
 
@@ -62,8 +53,9 @@ export const useStore = defineStore('main', {
       return this.endDate < new Date();
     },
     roster(state): Array<RosterEntry> {
+      const rosterStore = useRosterStore();
       return state.compiled
-        ? state.rosterAll.filter(
+        ? rosterStore.rosterAll.filter(
             (entry) =>
               entry.date >= state.startDate &&
               entry.date <= this.endDate &&
@@ -81,7 +73,8 @@ export const useStore = defineStore('main', {
     },
 
     rosterVersions(): Array<string> {
-      return this.rosterAll.reduce((versions, entry) => {
+      const rosterStore = useRosterStore();
+      return rosterStore.rosterAll.reduce((versions, entry) => {
         if (
           entry.date >= this.startDate &&
           entry.date <= this.endDate &&
@@ -108,20 +101,12 @@ export const useStore = defineStore('main', {
     setFirebase(fbApp: FirebaseApp) {
       this.firebaseApp = fbApp;
     },
-    setUser(e: User) {
-      console.log('store.setUser: ', e);
+    async setUser(e: User): Promise<void> {
       if (typeof e != 'undefined') {
-        const mysmos = query(collection(getFirestore(), 'smos'));
-        onSnapshot(mysmos, function (snapshot: QuerySnapshot<DocumentData>) {
-          snapshot.docChanges().forEach(function (change) {
-            console.log(
-              'onSnapShop: ',
-              change.type,
-              change.doc.id,
-              change.doc.data()
-            );
-          });
-        });
+        Notify.create({ message: `Logged in ${e.displayName || 'unknown'}` });
+        const smoStore = useSMOStore();
+        await smoStore.loadFromFirestore();
+        this.setMonth(new Date().getFullYear(), new Date().getMonth());
       }
       console.log('Set user', e);
     },
@@ -163,9 +148,9 @@ export const useStore = defineStore('main', {
         version: newVersionName,
       }));
       console.log('Patching new entries');
-      this.$patch((state) => {
-        state.rosterAll.push(...newEntries);
-      });
+      const rosterStore = useRosterStore();
+      rosterStore.patchEntries(newEntries);
+
       console.log('Done');
 
       this.monthVersion = newVersionName;
@@ -219,7 +204,8 @@ export const useStore = defineStore('main', {
           `Roster entry already exists for ${date.toString()}:${time} ${smoName}, ${activityName}`
         );
       } else {
-        this.rosterAll.push({
+        const rosterStore = useRosterStore();
+        rosterStore.rosterAll.push({
           date,
           time,
           smo: smoName,
@@ -259,7 +245,8 @@ export const useStore = defineStore('main', {
         if (!activity)
           throw new Error('activity must be in searchEntry and/or setEntry');
 
-        this.rosterAll.push({
+        const rosterStore = useRosterStore();
+        rosterStore.rosterAll.push({
           date: searchEntry.date,
           time: searchEntry.time,
           smo,
@@ -279,7 +266,8 @@ export const useStore = defineStore('main', {
       smoName: string,
       activityName: string
     ) {
-      const foundIndex = this.rosterAll.findIndex(
+      const rosterStore = useRosterStore();
+      const foundIndex = rosterStore.rosterAll.findIndex(
         (entry) =>
           isSameDay(entry.date, date) &&
           entry.time == time &&
@@ -291,7 +279,7 @@ export const useStore = defineStore('main', {
           `Entry does not exist ${date.toString()}:${time} for ${smoName}, ${activityName}`
         );
       } else {
-        this.rosterAll.splice(foundIndex, 1);
+        rosterStore.rosterAll.splice(foundIndex, 1);
       }
     },
 

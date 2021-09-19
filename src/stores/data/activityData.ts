@@ -1,4 +1,4 @@
-import { ActivityDefinition } from '../activities';
+import { ActivityDefinition } from '../models';
 
 export const activityData: Array<ActivityDefinition> = [
   {
