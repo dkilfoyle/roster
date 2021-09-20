@@ -3,12 +3,12 @@
     <div class="col text-center">
       Start Date:
       <span style="font-weight: bold">{{
-        format(store.startDate, 'yyyy-MM-dd')
+        format(monthStore.startDate, 'yyyy-MM-dd')
       }}</span>
     </div>
     <div class="row q-gutter-x-md">
       <q-select
-        v-model="month"
+        v-model="monthStore.month"
         emit-value
         map-options
         :options="[
@@ -31,7 +31,7 @@
         options-dense
       ></q-select>
       <q-select
-        v-model="year"
+        v-model="monthStore.year"
         :options="[2018, 2019, 2020, 2021, 2022, 2023, 2024]"
         filled
         dense
@@ -59,7 +59,7 @@
                 @click="finaliseVersion = true"
                 ><q-item-section>Finalise</q-item-section></q-item
               >
-              <div v-if="!store.isArchived">
+              <div v-if="!monthStore.isArchived">
                 <q-separator></q-separator>
                 <q-item clickable v-close-popup @click="deleteVersion = true"
                   ><q-item-section>Delete</q-item-section></q-item
@@ -73,7 +73,7 @@
     <q-dialog v-model="newVersion">
       <q-card>
         <q-card-section class="text-subtitle1"
-          >Create a new version of {{ store.monthName }}</q-card-section
+          >Create a new version of {{ monthStore.monthName }}</q-card-section
         >
         <q-card-section class="q-pt-none"
           ><q-input v-model="newVersionName" label="Name" autofocus></q-input
@@ -139,7 +139,7 @@
     </q-dialog>
     <q-btn
       color="primary"
-      :disable="store.isArchived"
+      :disable="monthStore.isArchived"
       class="col"
       @click="confirmNCT = true"
       >Load NCT</q-btn
@@ -170,26 +170,18 @@
 </template>
 
 <script lang="ts">
-import {
-  defineComponent,
-  reactive,
-  computed,
-  watch,
-  onMounted,
-  toRefs,
-} from 'vue';
+import { defineComponent, reactive, watch, toRefs, computed } from 'vue';
 import { format } from 'date-fns';
 import { useStore } from '../stores/store';
-import { getFirstMonday } from '../stores/utils';
+import { useMonthStore } from '../stores/monthStore';
 
 export default defineComponent({
   // name: 'ComponentName'
   setup() {
     const store = useStore();
+    const monthStore = useMonthStore();
 
     const state = reactive({
-      year: store.startDate.getFullYear(),
-      month: store.startDate.getMonth(),
       confirmNCT: false,
       newVersion: false,
       finaliseVersion: false,
@@ -197,26 +189,28 @@ export default defineComponent({
       newVersionName: '',
     });
 
-    const firstMonday = computed(() => getFirstMonday(state.year, state.month));
-
-    onMounted(() => {
-      console.log('monthOptions onMounted setMonth', state.year, state.month);
-    });
+    // const startDate = computed(() => monthStore.startDate);
 
     watch(
-      () => `${store.startDate.getFullYear()}-${store.startDate.getMonth()}`,
-      () => {
-        console.log('monthOptions saw new start date', store.startDate);
-        state.year = store.startDate.getFullYear();
-        state.month = store.startDate.getMonth();
+      () => monthStore.startDate,
+      (newVal) => {
+        console.log('monthOptions.watch(monthStore.startDate)', newVal);
+        void store.onNewMonth();
       }
     );
 
-    watch(firstMonday, () => store.setMonth(state.year, state.month));
+    watch(
+      () => ({ year: monthStore.year, month: monthStore.month }),
+      (newVal) => {
+        console.log('monthOptions.watch(year,month)', newVal);
+        monthStore.setMonth(newVal.year, newVal.month);
+      }
+    );
 
     return {
       ...toRefs(state),
       store,
+      monthStore,
       format,
     };
   },

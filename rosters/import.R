@@ -21,6 +21,7 @@ loadMonth = function(myyear, mymonth, startDate, weeks) {
     pivot_longer(cols=1:length(dates)+2, names_to="date", values_to="activity") %>%
     mutate(
       date = as.Date(date),
+      activity = recode(activity, `AL` = "AL"),
       smo = recode(smo, 
                    `Neil Anderson` = "NA",
                    `Alan Barber` = "AB",
@@ -63,11 +64,18 @@ loadMonth = function(myyear, mymonth, startDate, weeks) {
   return (y)
 }
 
-roster = loadMonth(2021,4,ymd("2021-03-29"),5)
-roster = rbind(roster, loadMonth(2021, 5, ymd("2021-05-03"), 4))
-roster = rbind(roster, loadMonth(2021, 6, ymd("2021-05-31"), 5))
-roster = rbind(roster, loadMonth(2021, 7, ymd("2021-07-05"), 4))
-roster = rbind(roster, loadMonth(2021, 8, ymd("2021-08-02"), 4))
-roster = rbind(roster, loadMonth(2021, 9, ymd("2021-08-30"), 5))
+roster = loadMonth(2020, 10, ymd("2020-10-05"), 4)
+roster = rbind(roster, loadMonth(2020, 11, ymd("2020-11-02"), 4))
+roster = rbind(roster, loadMonth(2020, 12, ymd("2020-11-30"), 5))
+roster = rbind(roster, loadMonth(2021, 1,  ymd("2021-01-04"), 4))
+roster = rbind(roster, loadMonth(2021, 2,  ymd("2021-02-01"), 4))
+roster = rbind(roster, loadMonth(2021, 3,  ymd("2021-03-01"), 4))
+roster = rbind(roster, loadMonth(2021, 4,  ymd("2021-03-29"), 5))
+roster = rbind(roster, loadMonth(2021, 5,  ymd("2021-05-03"), 4))
+roster = rbind(roster, loadMonth(2021, 6,  ymd("2021-05-31"), 5))
+roster = rbind(roster, loadMonth(2021, 7,  ymd("2021-07-05"), 4))
+roster = rbind(roster, loadMonth(2021, 8,  ymd("2021-08-02"), 4))
+roster = rbind(roster, loadMonth(2021, 9,  ymd("2021-08-30"), 5))
+roster = rbind(roster, loadMonth(2021, 10, ymd("2021-10-04"), 4))
 
-jsonlite::write_json(roster, "roster.json")
+jsonlite::write_json(roster, "rosterData.json")

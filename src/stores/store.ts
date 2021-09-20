@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { useSMOStore } from './smoStore';
 import { useActivityStore } from './activityStore';
 import { useRosterStore } from './rosterStore';
+import { useMonthStore } from './monthStore';
 
 import {
   RosterEntry,
@@ -13,18 +14,11 @@ import {
 
 import { holidays } from './holidays';
 
-import { FirebaseApp } from 'firebase/app';
 import { User, getAuth } from 'firebase/auth';
 
-import {
-  addDays,
-  eachDayOfInterval,
-  format,
-  isWeekend,
-  differenceInWeeks,
-} from 'date-fns';
+import { addDays } from 'date-fns';
 
-import { getEntryTimestamp, getFirstMonday, isSameDay } from './utils';
+import { getEntryTimestamp, isSameDay } from './utils';
 
 import { LoadingBar, Notify } from 'quasar';
 LoadingBar.setDefaults({
@@ -36,29 +30,21 @@ LoadingBar.setDefaults({
 export const useStore = defineStore('main', {
   state: () => ({
     monthVersion: 'Final',
-    firebaseApp: null as FirebaseApp | null,
-    startDate: getFirstMonday(new Date().getFullYear(), new Date().getMonth()),
-    numWeeks: 1,
     showWeekend: false,
     compiled: false,
     holidays,
-
     user: '',
+    loadedMonths: Array<string>(),
   }),
   getters: {
-    monthName: (state) => {
-      return format(state.startDate, 'MMM yyyy');
-    },
-    isArchived(): boolean {
-      return this.endDate < new Date();
-    },
     roster(state): Array<RosterEntry> {
       const rosterStore = useRosterStore();
+      const monthStore = useMonthStore();
       return state.compiled
         ? rosterStore.rosterAll.filter(
             (entry) =>
-              entry.date >= state.startDate &&
-              entry.date <= this.endDate &&
+              entry.date >= monthStore.startDate &&
+              entry.date <= monthStore.endDate &&
               entry.version == state.monthVersion
           )
         : [];
@@ -74,10 +60,11 @@ export const useStore = defineStore('main', {
 
     rosterVersions(): Array<string> {
       const rosterStore = useRosterStore();
+      const monthStore = useMonthStore();
       return rosterStore.rosterAll.reduce((versions, entry) => {
         if (
-          entry.date >= this.startDate &&
-          entry.date <= this.endDate &&
+          entry.date >= monthStore.startDate &&
+          entry.date <= monthStore.endDate &&
           !versions.includes(entry.version)
         )
           versions.push(entry.version);
@@ -85,67 +72,65 @@ export const useStore = defineStore('main', {
       }, Array<string>());
     },
 
-    endDate: (state) => addDays(state.startDate, state.numWeeks * 7 - 1),
-    dates(state): Array<Date> {
-      return eachDayOfInterval({
-        start: state.startDate,
-        end: this.endDate,
-      }).filter((date) => state.showWeekend || !isWeekend(date));
-    },
-
     isUserSignedIn() {
       return !!getAuth().currentUser;
     },
   },
   actions: {
-    setFirebase(fbApp: FirebaseApp) {
-      this.firebaseApp = fbApp;
-    },
     async setUser(e: User): Promise<void> {
-      if (typeof e != 'undefined') {
+      console.log('store.setUser');
+      const smoStore = useSMOStore();
+      const activityStore = useActivityStore();
+
+      if (e !== null) {
         Notify.create({ message: `Logged in ${e.displayName || 'unknown'}` });
-        const smoStore = useSMOStore();
         await smoStore.loadFromFirestore();
-        const activityStore = useActivityStore();
         await activityStore.loadFromFirestore();
-        Notify.create({
-          message: `Loaded ${smoStore.smos.length} smos, ${activityStore.activities.length} activities`,
-        });
-
-        this.setMonth(new Date().getFullYear(), new Date().getMonth());
-      }
-      console.log('Set user', e);
-    },
-    setMonth(year: number, month: number, numWeeks?: number) {
-      // console.log('setMonth', year, month, numWeeks);
-      this.startDate = getFirstMonday(year, month);
-
-      if (typeof numWeeks == 'undefined') {
-        const nextFirstMonday = getFirstMonday(
-          month == 11 ? year + 1 : year,
-          (month + 1) % 12
+        // Notify.create({
+        //   message: `Loaded ${smoStore.smos.length} smos, ${activityStore.activities.length} activities`,
+        // });
+        this.user = e.displayName || '';
+        console.log(' - Set user', e.displayName);
+        const monthStore = useMonthStore();
+        void monthStore.setMonth(
+          new Date().getFullYear(),
+          new Date().getMonth()
         );
-        this.numWeeks = differenceInWeeks(nextFirstMonday, this.startDate);
-      } else this.numWeeks = numWeeks;
+      } else {
+        console.log(' - No user');
+      }
+    },
+    async onNewMonth() {
+      // Called from monthOptions watch(monthStore.startDate)
+      // 1. Load roster from firestore
+      // 2. compile activity for month
+      // 3. compile smos for month
+      // 4. Set compiled flag
+      const monthStore = useMonthStore();
+      console.log('onNewMonth', monthStore.monthName);
+
+      if (!this.loadedMonths.includes(monthStore.monthName)) {
+        this.loadedMonths.push(monthStore.monthName);
+
+        const rosterStore = useRosterStore();
+        const loaded = await rosterStore.loadFromFirestore(
+          monthStore.startDate,
+          monthStore.endDate
+        );
+        Notify.create({
+          message: `${monthStore.monthName}: ${loaded} roster entries`,
+        });
+      }
 
       const activityStore = useActivityStore();
-      activityStore.compile(this.startDate, this.endDate);
+      activityStore.compile(monthStore.startDate, monthStore.endDate);
 
       const smoStore = useSMOStore();
-      smoStore.compile(this.dates);
+      smoStore.compile(monthStore.dates);
 
       this.compiled = true;
     },
-    setPrevMonth() {
-      const year = this.startDate.getFullYear();
-      const month = this.startDate.getMonth();
-      this.setMonth(month == 0 ? year - 1 : year, month == 0 ? 11 : month - 1);
-    },
-    setNextMonth() {
-      const year = this.startDate.getFullYear();
-      const month = this.startDate.getMonth();
-      this.setMonth(month == 11 ? year + 1 : year, month == 11 ? 0 : month + 1);
-    },
+
     doCreateVersion(newVersionName: string) {
       console.log('doCreateVersion', newVersionName);
       console.log('Creating new entries');
@@ -173,19 +158,22 @@ export const useStore = defineStore('main', {
       console.log(
         'Warning: compile SMOs will reset any existing NCT times back to NCT default'
       );
-      const smos = useSMOStore();
-      smos.getNCTEntries(this.startDate, this.endDate).forEach((entry) => {
-        this.setRosterEntry(
-          {
-            date: entry.date,
-            time: entry.time,
-            smo: entry.smo,
-          },
-          {
-            activity: entry.activity,
-          }
-        );
-      });
+      const smoStore = useSMOStore();
+      const monthStore = useMonthStore();
+      smoStore
+        .getNCTEntries(monthStore.startDate, monthStore.endDate)
+        .forEach((entry) => {
+          this.setRosterEntry(
+            {
+              date: entry.date,
+              time: entry.time,
+              smo: entry.smo,
+            },
+            {
+              activity: entry.activity,
+            }
+          );
+        });
     },
 
     getRosterAtTime(date: Date, time: string) {

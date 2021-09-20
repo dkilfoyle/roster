@@ -5,7 +5,7 @@
         <tr>
           <th></th>
           <th></th>
-          <th v-for="date in store.dates" :key="date">
+          <th v-for="date in monthStore.dates" :key="date">
             {{ format(date, 'dd') }}
           </th>
         </tr>
@@ -53,7 +53,7 @@
             ></q-btn>
           </th>
           <th></th>
-          <th v-for="date in store.dates" :key="date">
+          <th v-for="date in monthStore.dates" :key="date">
             {{ format(date, 'ccccc') }}
           </th>
         </tr>
@@ -68,7 +68,7 @@
             {{ i % 2 ? 'PM' : 'AM' }}
           </td>
           <smo-cell
-            v-for="date in store.dates"
+            v-for="date in monthStore.dates"
             :key="date"
             :dateStr="date.toDateString()"
             :time="i % 2 ? 'PM' : 'AM'"
@@ -84,6 +84,7 @@
 import { defineComponent } from 'vue';
 import { useStore } from '../stores/store';
 import { useSMOStore } from 'src/stores/smoStore';
+import { useMonthStore } from 'src/stores/monthStore';
 
 import smoCell from './smoCell.vue';
 import { format } from 'date-fns';
@@ -94,6 +95,8 @@ export default defineComponent({
   setup() {
     const store = useStore();
     const smoStore = useSMOStore();
+    const monthStore = useMonthStore();
+
     const showAll = () => {
       smoStore.viewOptions.showEMG = true;
       smoStore.viewOptions.showEEG = true;
@@ -106,6 +109,7 @@ export default defineComponent({
     return {
       store,
       smoStore,
+      monthStore,
       showAll,
       format,
     };

@@ -64,6 +64,7 @@ export const useActivityStore = defineStore('activity', {
   },
   actions: {
     async loadFromFirestore(): Promise<void> {
+      console.log('activityStore.loadFromFirestore');
       const q = query(collection(getFirestore(), 'activities'));
       const qss = await getDocs(q);
       const loadacts = Array<ActivityDefinition>();
@@ -71,7 +72,7 @@ export const useActivityStore = defineStore('activity', {
         loadacts.push(doc.data() as ActivityDefinition);
       });
       this.activities = loadacts;
-      console.log('Loaded activities', this.activities.length);
+      console.log(' - Loaded activities', this.activities.length);
     },
 
     getActivity(activityName: string): ActivityDefinition {

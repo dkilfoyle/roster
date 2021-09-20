@@ -1,3 +1,4 @@
+import { getAuth } from 'firebase/auth';
 import { route } from 'quasar/wrappers';
 import {
   createMemoryHistory,
@@ -36,11 +37,14 @@ export default route(function (/* { store, ssrContext } */) {
   });
 
   Router.beforeEach((to, from, next) => {
-    console.log('beforeEach: ', from.path, '=>', to.path);
-    next();
-  });
-  Router.afterEach((to, from) => {
-    console.log('afterEach: ', from.path, '=>', to.path);
+    const requiresAuth = to.matched.some((x) => x.meta.requiresAuth);
+    console.log('before each', requiresAuth, getAuth().currentUser);
+
+    if (requiresAuth && !!getAuth().currentUser) {
+      next('loginPage');
+    } else {
+      next();
+    }
   });
 
   return Router;

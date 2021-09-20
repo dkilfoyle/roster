@@ -24,12 +24,12 @@
             flat
             round
             size="md"
-            @click="store.setPrevMonth"
+            @click="monthStore.setPrevMonth"
             icon="navigate_before"
           ></q-btn>
           <div class="column col-auto justify-center">
             <div class="col-auto" style="color: cyan">
-              {{ store.monthName }}
+              {{ monthStore.monthName }}
             </div>
             <div
               class="col"
@@ -44,7 +44,7 @@
             flat
             round
             size="md"
-            @click="store.setNextMonth"
+            @click="monthStore.setNextMonth"
             icon="navigate_next"
           ></q-btn>
         </div>
@@ -92,6 +92,15 @@
         >
           <smo-options></smo-options>
         </q-expansion-item>
+
+        <q-expansion-item
+          label="User"
+          :content-inset-level="0.5"
+          expand-separator
+          icon="manage_accounts"
+        >
+          <user-options></user-options>
+        </q-expansion-item>
       </q-list>
     </q-drawer>
 
@@ -110,17 +119,20 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import { useStore } from '../stores/store';
+import { useMonthStore } from '../stores/monthStore';
 
 import activityOptions from '../components/activityOptions.vue';
 import smoOptions from '../components/smoOptions.vue';
 import monthOptions from '../components/monthOptions.vue';
+import userOptions from '../components/userOptions.vue';
 
 export default defineComponent({
   name: 'MainLayout',
-  components: { activityOptions, smoOptions, monthOptions },
+  components: { activityOptions, smoOptions, monthOptions, userOptions },
 
   setup() {
     const store = useStore();
+    const monthStore = useMonthStore();
     const leftDrawerOpen = ref(false);
 
     return {
@@ -129,6 +141,7 @@ export default defineComponent({
         leftDrawerOpen.value = !leftDrawerOpen.value;
       },
       store,
+      monthStore,
     };
   },
 });

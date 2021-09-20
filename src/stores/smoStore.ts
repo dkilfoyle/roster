@@ -67,6 +67,8 @@ export const useSMOStore = defineStore('smo', {
   },
   actions: {
     async loadFromFirestore(): Promise<void> {
+      console.log('smoStore.loadFromFirestore');
+
       const q = query(collection(getFirestore(), 'smos'));
       const qss = await getDocs(q);
       const loadsmos = Array<SMODefinition>();
@@ -74,7 +76,7 @@ export const useSMOStore = defineStore('smo', {
         loadsmos.push(doc.data() as SMODefinition);
       });
       this.smos = loadsmos;
-      console.log('Loaded smos', this.smos.length);
+      console.log(' - Loaded smos', this.smos.length);
       // onSnapshot(mysmos, (snapshot: QuerySnapshot<DocumentData>) => {
       //   snapshot.docChanges().forEach((change) => {
       //     if (change.type == 'added')

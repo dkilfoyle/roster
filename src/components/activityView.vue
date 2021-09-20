@@ -5,7 +5,7 @@
         <tr>
           <th></th>
           <th></th>
-          <th v-for="date in store.dates" :key="date">
+          <th v-for="date in monthStore.dates" :key="date">
             {{ format(date, 'dd') }}
           </th>
           <th v-if="activityStore.viewOptions.showSummary">Sum</th>
@@ -56,7 +56,7 @@
             ></q-btn>
           </th>
           <th></th>
-          <th v-for="date in store.dates" :key="date">
+          <th v-for="date in monthStore.dates" :key="date">
             {{ format(date, 'ccccc') }}
           </th>
           <th v-if="activityStore.viewOptions.showSummary"></th>
@@ -71,7 +71,7 @@
             <td>{{ activity.name }}</td>
             <td style="border-right: 2px solid black">AM</td>
             <activity-cell
-              v-for="date in store.dates"
+              v-for="date in monthStore.dates"
               :key="date"
               :dateStr="date.toDateString()"
               time="AM"
@@ -88,7 +88,7 @@
             <td></td>
             <td style="border-right: 2px solid black">PM</td>
             <activity-cell
-              v-for="date in store.dates"
+              v-for="date in monthStore.dates"
               :key="date"
               :dateStr="date.toDateString()"
               time="PM"
@@ -106,6 +106,7 @@
 import { defineComponent, onBeforeUpdate, onUpdated } from 'vue';
 import { useStore } from '../stores/store';
 import { useActivityStore } from '../stores/activityStore';
+import { useMonthStore } from '../stores/monthStore';
 
 import activityCell from './activityCell.vue';
 import { format } from 'date-fns';
@@ -116,6 +117,7 @@ export default defineComponent({
   setup() {
     const store = useStore();
     const activityStore = useActivityStore();
+    const monthStore = useMonthStore();
 
     onBeforeUpdate(() => {
       console.log('Activity view before update');
@@ -133,13 +135,15 @@ export default defineComponent({
         typeof activity.perWeek != 'undefined'
       )
         return (
-          store.getActivitySum(activityName) < activity.perWeek * store.numWeeks
+          store.getActivitySum(activityName) <
+          activity.perWeek * monthStore.numWeeks
         );
     };
 
     return {
       store,
       activityStore,
+      monthStore,
       sumError,
       format,
     };

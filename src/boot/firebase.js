@@ -2,6 +2,7 @@ import { boot } from 'quasar/wrappers';
 import { useStore } from '../stores/store'; // this boot must occur after pinia
 import { initializeApp } from 'firebase/app';
 import { onAuthStateChanged, getAuth } from 'firebase/auth';
+import { enableIndexedDbPersistence, getFirestore } from 'firebase/firestore';
 
 // "async" is optional;
 // more info on params: https://v2.quasar.dev/quasar-cli/boot-files
@@ -24,8 +25,9 @@ export default boot(
     };
 
     // Initialize Firebase
-    const firebaseApp = initializeApp(firebaseConfig);
-    store.setFirebase(firebaseApp);
+    initializeApp(firebaseConfig);
+
+    void enableIndexedDbPersistence(getFirestore());
 
     // Init auth
     onAuthStateChanged(getAuth(), (u) => {

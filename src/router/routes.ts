@@ -1,5 +1,5 @@
-import { RouteRecordRaw } from 'vue-router';
 import { getAuth } from 'firebase/auth';
+import { RouteRecordRaw } from 'vue-router';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -12,12 +12,27 @@ const routes: RouteRecordRaw[] = [
           !!getAuth().currentUser
             ? import('pages/loginPage.vue')
             : import('pages/smoPage.vue'),
+        meta: {
+          requriesAuth: true,
+        },
       },
       {
         path: 'activityPage',
         component: () => import('pages/activityPage.vue'),
+        meta: {
+          requiresAuth: true,
+        },
       },
-      { path: 'smoPage', component: () => import('pages/smoPage.vue') },
+      {
+        path: 'smoPage',
+        component: () => import('pages/smoPage.vue'),
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'loginPage',
+        component: () => import('pages/loginPage.vue'),
+        meta: { requiresAuth: false },
+      },
     ],
   },
 
