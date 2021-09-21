@@ -7,11 +7,10 @@ import { enableIndexedDbPersistence, getFirestore } from 'firebase/firestore';
 // "async" is optional;
 // more info on params: https://v2.quasar.dev/quasar-cli/boot-files
 export default boot(
-  (
-    {
-      /*app*/
-    }
-  ) => {
+  ({
+    /*app*/
+    router,
+  }) => {
     // Your web app's Firebase configuration
     const store = useStore();
 
@@ -25,13 +24,15 @@ export default boot(
     };
 
     // Initialize Firebase
-    initializeApp(firebaseConfig);
+    const firebaseApp = initializeApp(firebaseConfig);
+    store.firebaseApp = firebaseApp;
 
     void enableIndexedDbPersistence(getFirestore());
 
     // Init auth
     onAuthStateChanged(getAuth(), (u) => {
       void store.setUser(u);
+      void router.push('smoPage');
     });
   }
 );

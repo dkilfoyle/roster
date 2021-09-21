@@ -1,8 +1,11 @@
 <template>
   <q-page padding class="column items-center">
     <h2>Neurology Roster</h2>
-    <h6>Login</h6>
-    <q-btn @click="signIn">Login</q-btn>
+    <h6 v-if="store.user">Logged in as {{ store.user }}</h6>
+    <q-btn v-if="store.user" @click="signOutUser" color="secondary"
+      >Logout</q-btn
+    >
+    <q-btn v-else @click="signIn" color="primary">Login</q-btn>
   </q-page>
 </template>
 
@@ -16,20 +19,23 @@ import {
   signOut,
 } from 'firebase/auth';
 
+import { useStore } from '../stores/store';
+
 export default defineComponent({
   name: 'PageIndex',
   setup() {
-    // Signs-in Friendly Chat.
     async function signIn() {
-      // Sign in Firebase using popup auth and Google as the identity provider.
       var provider = new GoogleAuthProvider();
       await signInWithPopup(getAuth(), provider);
     }
     async function signOutUser() {
-      // Sign out of Firebase.
       await signOut(getAuth());
     }
+
+    const store = useStore();
+
     return {
+      store,
       signIn,
       signOutUser,
     };

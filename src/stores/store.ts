@@ -21,6 +21,7 @@ import { addDays } from 'date-fns';
 import { getEntryTimestamp, isSameDay } from './utils';
 
 import { LoadingBar, Notify } from 'quasar';
+import { FirebaseApp } from 'firebase/app';
 LoadingBar.setDefaults({
   color: 'cyan',
   size: '2px',
@@ -35,6 +36,7 @@ export const useStore = defineStore('main', {
     holidays,
     user: '',
     loadedMonths: Array<string>(),
+    firebaseApp: undefined as FirebaseApp | undefined,
   }),
   getters: {
     roster(state): Array<RosterEntry> {
@@ -72,25 +74,28 @@ export const useStore = defineStore('main', {
       }, Array<string>());
     },
 
-    isUserSignedIn() {
-      return !!getAuth().currentUser;
+    isUserSignedIn(state) {
+      return getAuth(state.firebaseApp).currentUser;
     },
   },
   actions: {
     async setUser(e: User): Promise<void> {
-      console.log('store.setUser');
+      console.log('store.setUser: ', e.displayName);
       const smoStore = useSMOStore();
       const activityStore = useActivityStore();
 
       if (e !== null) {
-        Notify.create({ message: `Logged in ${e.displayName || 'unknown'}` });
+        Notify.create({
+          message: 'Logged in',
+          caption: `${e.displayName || 'unknown'}`,
+          position: 'bottom-right',
+        });
         await smoStore.loadFromFirestore();
         await activityStore.loadFromFirestore();
         // Notify.create({
         //   message: `Loaded ${smoStore.smos.length} smos, ${activityStore.activities.length} activities`,
         // });
         this.user = e.displayName || '';
-        console.log(' - Set user', e.displayName);
         const monthStore = useMonthStore();
         void monthStore.setMonth(
           new Date().getFullYear(),
@@ -106,6 +111,7 @@ export const useStore = defineStore('main', {
       // 2. compile activity for month
       // 3. compile smos for month
       // 4. Set compiled flag
+      this.compiled = false;
       const monthStore = useMonthStore();
       console.log('onNewMonth', monthStore.monthName);
 
@@ -117,9 +123,10 @@ export const useStore = defineStore('main', {
           monthStore.startDate,
           monthStore.endDate
         );
-        Notify.create({
-          message: `${monthStore.monthName}: ${loaded} roster entries`,
-        });
+        console.log(`${monthStore.monthName}: ${loaded} roster entries`);
+        // Notify.create({
+        //   message: `${monthStore.monthName}: ${loaded} roster entries`,
+        // });
       }
 
       const activityStore = useActivityStore();

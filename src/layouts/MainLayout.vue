@@ -24,7 +24,7 @@
             flat
             round
             size="md"
-            @click="monthStore.setPrevMonth"
+            @click="monthStore.setPrevMonth()"
             icon="navigate_before"
           ></q-btn>
           <div class="column col-auto justify-center">
@@ -44,14 +44,14 @@
             flat
             round
             size="md"
-            @click="monthStore.setNextMonth"
+            @click="monthStore.setNextMonth()"
             icon="navigate_next"
           ></q-btn>
         </div>
 
         <div class="col">
           <q-tabs inline-label class="float-right">
-            <q-route-tab icon="person" to="/" label="SMO View" exact />
+            <q-route-tab icon="person" to="/smoPage" label="SMO View" exact />
             <q-route-tab
               icon="directions_run"
               to="/activityPage"

@@ -170,7 +170,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, reactive, watch, toRefs, computed } from 'vue';
+import { defineComponent, reactive, watch, toRefs } from 'vue';
 import { format } from 'date-fns';
 import { useStore } from '../stores/store';
 import { useMonthStore } from '../stores/monthStore';
@@ -194,7 +194,7 @@ export default defineComponent({
     watch(
       () => monthStore.startDate,
       (newVal) => {
-        console.log('monthOptions.watch(monthStore.startDate)', newVal);
+        // console.log('monthOptions.watch(monthStore.startDate)', newVal);
         void store.onNewMonth();
       }
     );
@@ -202,7 +202,7 @@ export default defineComponent({
     watch(
       () => ({ year: monthStore.year, month: monthStore.month }),
       (newVal) => {
-        console.log('monthOptions.watch(year,month)', newVal);
+        // console.log('monthOptions.watch(year,month)', newVal);
         monthStore.setMonth(newVal.year, newVal.month);
       }
     );

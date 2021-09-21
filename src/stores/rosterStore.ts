@@ -25,7 +25,7 @@ export const useRosterStore = defineStore('roster', {
   },
   actions: {
     async loadFromFirestore(startDate: Date, endDate: Date) {
-      console.log('rosterStore.loadFromFirestore', startDate);
+      console.log('rosterStore.loadFromFirestore', startDate.toUTCString());
       const q = query(
         collection(getFirestore(), 'roster'),
         where('date', '>=', format(startDate, 'yyyy-MM-dd')),
@@ -51,14 +51,10 @@ export const useRosterStore = defineStore('roster', {
 
       // when receiving added, modified or removed changes - ignore initialState load
       onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-        console.log(
-          'receieved roster query snapshot',
-          snapshot.docChanges.length,
-          initialState
-        );
         if (initialState) {
           initialState = false;
         } else {
+          console.log('roster.onSnapShot');
           const loadentries = Array<RosterEntry>();
           snapshot.docChanges().forEach((change) => {
             if (change.type == 'added')

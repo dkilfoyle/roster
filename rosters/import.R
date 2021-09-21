@@ -21,7 +21,8 @@ loadMonth = function(myyear, mymonth, startDate, weeks) {
     pivot_longer(cols=1:length(dates)+2, names_to="date", values_to="activity") %>%
     mutate(
       date = as.Date(date),
-      activity = recode(activity, `AL` = "AL"),
+      version = "Final",
+      activity = recode(activity, `AL` = "ANL"),
       smo = recode(smo, 
                    `Neil Anderson` = "NA",
                    `Alan Barber` = "AB",

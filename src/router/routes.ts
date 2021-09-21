@@ -1,4 +1,3 @@
-import { getAuth } from 'firebase/auth';
 import { RouteRecordRaw } from 'vue-router';
 
 const routes: RouteRecordRaw[] = [
@@ -8,10 +7,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       {
         path: '',
-        component: () =>
-          !!getAuth().currentUser
-            ? import('pages/loginPage.vue')
-            : import('pages/smoPage.vue'),
+        component: () => import('pages/loginPage.vue'),
         meta: {
           requriesAuth: true,
         },

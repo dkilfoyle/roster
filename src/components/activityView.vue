@@ -103,7 +103,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, onBeforeUpdate, onUpdated } from 'vue';
+import { defineComponent } from 'vue';
 import { useStore } from '../stores/store';
 import { useActivityStore } from '../stores/activityStore';
 import { useMonthStore } from '../stores/monthStore';
@@ -118,14 +118,6 @@ export default defineComponent({
     const store = useStore();
     const activityStore = useActivityStore();
     const monthStore = useMonthStore();
-
-    onBeforeUpdate(() => {
-      console.log('Activity view before update');
-    });
-
-    onUpdated(() => {
-      console.log('updated');
-    });
 
     const sumError = (activityName: string) => {
       if (!activityStore.viewOptions.showErrors) return false;
