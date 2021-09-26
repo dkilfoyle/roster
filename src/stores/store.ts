@@ -33,10 +33,18 @@ export const useStore = defineStore('main', {
     monthVersion: 'Final',
     showWeekend: false,
     compiled: false,
+    summaryLoaded: false,
     holidays,
     user: '',
     loadedMonths: Array<string>(),
     firebaseApp: undefined as FirebaseApp | undefined,
+    summaryOptions: {
+      startMonth: new Date().getMonth(),
+      startYear: new Date().getFullYear() - 1,
+      endMonth: new Date().getMonth(),
+      endYear: new Date().getFullYear(),
+      showHeatmap: true,
+    },
   }),
   getters: {
     roster(state): Array<RosterEntry> {
@@ -76,6 +84,21 @@ export const useStore = defineStore('main', {
 
     isUserSignedIn(state) {
       return getAuth(state.firebaseApp).currentUser;
+    },
+
+    summaryStartDate(state) {
+      return new Date(
+        state.summaryOptions.startYear,
+        state.summaryOptions.startMonth,
+        1
+      );
+    },
+    summaryEndDate(state) {
+      return new Date(
+        state.summaryOptions.endYear,
+        state.summaryOptions.endMonth,
+        28
+      );
     },
   },
   actions: {

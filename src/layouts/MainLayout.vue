@@ -64,7 +64,7 @@
     </q-header>
 
     <q-drawer v-model="leftDrawerOpen" side="left" bordered class="bg-grey-1">
-      <q-list bordered dense>
+      <q-list bordered>
         <q-expansion-item
           default-opened
           label="Month"
@@ -94,6 +94,16 @@
         </q-expansion-item>
 
         <q-expansion-item
+          @show="router.push('/summaryPage')"
+          label="Summary View"
+          :content-inset-level="0.5"
+          expand-separator
+          icon="summarize"
+        >
+          <summary-options></summary-options>
+        </q-expansion-item>
+
+        <q-expansion-item
           label="User"
           :content-inset-level="0.5"
           expand-separator
@@ -120,20 +130,29 @@
 import { defineComponent, ref } from 'vue';
 import { useStore } from '../stores/store';
 import { useMonthStore } from '../stores/monthStore';
+import { useRouter } from 'vue-router';
 
 import activityOptions from '../components/activityOptions.vue';
 import smoOptions from '../components/smoOptions.vue';
 import monthOptions from '../components/monthOptions.vue';
 import userOptions from '../components/userOptions.vue';
+import summaryOptions from '../components/summaryOptions.vue';
 
 export default defineComponent({
   name: 'MainLayout',
-  components: { activityOptions, smoOptions, monthOptions, userOptions },
+  components: {
+    activityOptions,
+    smoOptions,
+    monthOptions,
+    userOptions,
+    summaryOptions,
+  },
 
   setup() {
     const store = useStore();
     const monthStore = useMonthStore();
     const leftDrawerOpen = ref(false);
+    const router = useRouter();
 
     return {
       leftDrawerOpen,
@@ -142,6 +161,7 @@ export default defineComponent({
       },
       store,
       monthStore,
+      router,
     };
   },
 });

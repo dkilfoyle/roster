@@ -35,6 +35,42 @@ export interface ActivityDefinition {
   perWeek?: number;
 }
 
+export interface SMOActivitySummary {
+  name: string;
+  Call: number;
+  WeekendA: number;
+  WeekendB: number;
+  PH: number;
+  Neuro: number;
+  Stroke: number;
+  ACT: number;
+  NSH: number;
+  WTH: number;
+  MMH: number;
+  EMG: number;
+  EEG: number;
+  BTX: number;
+  ANL: number;
+  CME: number;
+}
+
+export type SMOActivityName =
+  | 'Call'
+  | 'WeekendA'
+  | 'WeekendB'
+  | 'PH'
+  | 'Neuro'
+  | 'Stroke'
+  | 'ACT'
+  | 'NSH'
+  | 'WTH'
+  | 'MMH'
+  | 'EMG'
+  | 'EEG'
+  | 'BTX'
+  | 'ANL'
+  | 'CME';
+
 export interface SMODefinition {
   name: string;
   fullName: string;

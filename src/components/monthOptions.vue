@@ -8,6 +8,8 @@
     </div>
     <div class="row q-gutter-x-md">
       <q-select
+        label="Month"
+        stack-label
         v-model="monthStore.month"
         emit-value
         map-options
@@ -31,6 +33,8 @@
         options-dense
       ></q-select>
       <q-select
+        label="Year"
+        stack-label
         v-model="monthStore.year"
         :options="[2018, 2019, 2020, 2021, 2022, 2023, 2024]"
         filled
@@ -138,7 +142,7 @@
       </q-card>
     </q-dialog>
     <q-btn
-      color="primary"
+      color="secondary"
       :disable="monthStore.isArchived"
       class="col"
       @click="confirmNCT = true"

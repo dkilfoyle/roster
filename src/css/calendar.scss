@@ -61,6 +61,80 @@ $orange-4: #ffb74d !default;
   height: calc(100vh - 50px - 48px);
   cursor: default;
   thead {
+    // first two rows are sticky
+    tr:first-child,
+    tr:nth-child(2) {
+      th {
+        position: sticky;
+        /* higher than z-index for td below */
+        z-index: 2;
+        /* bg color is important; just specify one */
+        background: $yellow-4;
+      }
+    }
+    tr:first-child th {
+      top: 0;
+      height: 30px;
+      background: $green-4;
+    }
+    tr:nth-child(2) th {
+      top: 30px;
+      background: $red-4;
+    }
+
+    // first two rows of header
+    tr:first-child,
+    tr:nth-child(2) {
+      th:first-child {
+        z-index: 5;
+        left: 0;
+        min-width: 62px;
+      }
+      th:nth-child(2) {
+        z-index: 5;
+        left: 62px;
+      }
+    }
+  }
+
+  tbody {
+    cursor: pointer;
+
+    // first two columns
+    td:first-child,
+    td:nth-child(2) {
+      z-index: 4;
+      background: $orange-2;
+      position: sticky;
+    }
+
+    td:first-child {
+      left: 0;
+      width: 62px;
+      font-weight: bolder;
+      border-right-color: darkgrey;
+    }
+
+    td:nth-child(2),
+    th:nth-child(2) {
+      left: 62px;
+    }
+
+    tr:nth-child(4n),
+    tr:nth-child(4n-1) {
+      background: rgb(255, 255, 255);
+    }
+    tr:nth-child(4n-2),
+    tr:nth-child(4n-3) {
+      background: rgb(238, 238, 238);
+    }
+  }
+}
+
+.sticky-summary-table {
+  height: calc(100vh - 50px - 48px);
+  cursor: default;
+  thead {
     tr:first-child,
     tr:nth-child(2) {
       th {
@@ -83,17 +157,17 @@ $orange-4: #ffb74d !default;
 
     tr:first-child,
     tr:nth-child(2) {
-      th:first-child,
-      th:nth-child(2) {
+      th:first-child {
         z-index: 5;
+        left: 0;
+        min-width: 62px;
       }
     }
   }
 
   tbody {
     cursor: pointer;
-    td:first-child,
-    td:nth-child(2) {
+    td:first-child {
       z-index: 2;
       background: $orange-2;
       position: sticky;
@@ -106,19 +180,12 @@ $orange-4: #ffb74d !default;
       font-weight: bolder;
       border-right-color: darkgrey;
     }
-
-    td:nth-child(2),
-    th:nth-child(2) {
-      left: 62px;
-    }
-
-    tr:nth-child(4n),
-    tr:nth-child(4n-1) {
-      background: rgb(255, 255, 255);
-    }
-    tr:nth-child(4n-2),
-    tr:nth-child(4n-3) {
+    tr {
       background: rgb(238, 238, 238);
+    }
+
+    tr:nth-child(2n) {
+      background: rgb(255, 255, 255);
     }
   }
 }

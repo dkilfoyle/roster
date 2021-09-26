@@ -29,6 +29,11 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/loginPage.vue'),
         meta: { requiresAuth: false },
       },
+      {
+        path: 'summaryPage',
+        component: () => import('pages/summaryPage.vue'),
+        meta: { requiresAuth: true },
+      },
     ],
   },
 

@@ -24,6 +24,27 @@ export const useRosterStore = defineStore('roster', {
     },
   },
   actions: {
+    async loadAllFromFirestore() {
+      console.log('rosterStore.loadAllFromFirestore');
+      const q = query(collection(getFirestore(), 'roster'));
+
+      //todo: loadFromFirestore(startDate, endDate) using where(), where()
+      // load all existing documents
+      const qss = await getDocs(q);
+      console.log(' - getDocs returned ', qss.docs.length);
+      const loadentries = Array<RosterEntry>();
+      qss.forEach((doc) => {
+        const entry = doc.data();
+        entry.date = new Date(entry.date);
+        entry.notes = '';
+        entry.version = 'Final';
+
+        loadentries.push(entry as RosterEntry);
+      });
+      this.rosterAll = loadentries;
+      return loadentries.length;
+    },
+
     async loadFromFirestore(startDate: Date, endDate: Date) {
       console.log('rosterStore.loadFromFirestore', startDate.toUTCString());
       const q = query(
