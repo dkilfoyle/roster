@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { RosterEntry, SMODefinition, Time } from './models';
+import { RosterData, RosterEntry, SMODefinition, Time } from './models';
 // import { smoData } from './data/smoData';
 
 import { parseRRule, isSameDay } from './utils';
@@ -146,7 +146,7 @@ export const useSMOStore = defineStore('smo', {
       });
     },
     getNCTEntries(startDate: Date, endDate: Date) {
-      const entries = Array<RosterEntry>();
+      const entries = Array<RosterData>();
       this.smos.forEach((smo) => {
         smo.NCT.forEach((nct) => {
           parseRRule(nct.AM, startDate, endDate).forEach((date) =>

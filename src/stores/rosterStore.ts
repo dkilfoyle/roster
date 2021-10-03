@@ -1,29 +1,99 @@
 import { defineStore } from 'pinia';
-import { RosterEntry } from './models';
+import {
+  RosterData,
+  RosterEntry,
+  SetRosterEntry,
+  SearchRosterEntry,
+  Time,
+  RosterLookup,
+} from './models';
 
 import {
   query,
   collection,
   getFirestore,
   where,
-  onSnapshot,
-  QuerySnapshot,
-  DocumentData,
+  doc,
+  setDoc,
   getDocs,
+  deleteDoc,
+  addDoc,
 } from 'firebase/firestore';
+
 import { format } from 'date-fns';
+import { isSameDay, getEntryTimestamp } from './utils';
+// import { rosterData } from './data/rosterData';
+import { useMonthStore } from './monthStore';
 
 export const useRosterStore = defineStore('roster', {
   state: () => ({
-    rosterAll: Array<RosterEntry>(),
+    allEntries: Array<RosterEntry>(),
   }),
   getters: {
-    rosterAllLength: (state) => {
-      console.log('rosterStore.rosterAll.length = ', state.rosterAll.length);
-      return state.rosterAll.length;
+    monthEntries(state) {
+      const monthStore = useMonthStore();
+      return state.allEntries.filter(
+        (entry) =>
+          entry.date >= monthStore.startDate &&
+          entry.date <= monthStore.endDate &&
+          entry.version == monthStore.version
+      );
+    },
+    monthEntriesLookup(): RosterLookup {
+      return this.monthEntries.reduce((lookupTable, entry) => {
+        const id = getEntryTimestamp(entry.date, entry.time);
+        if (lookupTable[id]) lookupTable[id].push(entry);
+        else lookupTable[id] = [entry];
+        return lookupTable;
+      }, <RosterLookup>{});
+    },
+    monthVersions(): Array<string> {
+      const monthStore = useMonthStore();
+      return this.monthEntries.reduce((versions, entry) => {
+        if (
+          entry.date >= monthStore.startDate &&
+          entry.date <= monthStore.endDate &&
+          !versions.includes(entry.version)
+        )
+          versions.push(entry.version);
+        return versions;
+      }, Array<string>());
     },
   },
   actions: {
+    // getRosterAtTime(date: Date, time: Time) {
+    //   return this.allEntries.filter(
+    //     (entry) => entry.time == time && isSameDay(entry.date, date)
+    //   );
+    // },
+    getRosterAtTime(date: Date, time: string) {
+      const id = getEntryTimestamp(date, time);
+      return this.monthEntriesLookup[id] || [];
+    },
+
+    filter(searchCriteria: SearchRosterEntry, curMonth = true) {
+      return (
+        (curMonth ? this.monthEntries : this.allEntries).filter((entry) => {
+          if (searchCriteria.version && entry.version != searchCriteria.version)
+            return false;
+          if (searchCriteria.time && entry.time != searchCriteria.time)
+            return false;
+          if (searchCriteria.smo && entry.smo != searchCriteria.smo)
+            return false;
+          if (
+            searchCriteria.activity &&
+            entry.activity != searchCriteria.activity
+          )
+            return false;
+          if (
+            searchCriteria.date &&
+            !isSameDay(entry.date, searchCriteria.date)
+          )
+            return false;
+          return true;
+        }) || Array<RosterEntry>()
+      );
+    },
     async loadAllFromFirestore() {
       console.log('rosterStore.loadAllFromFirestore');
       const q = query(collection(getFirestore(), 'roster'));
@@ -35,13 +105,13 @@ export const useRosterStore = defineStore('roster', {
       const loadentries = Array<RosterEntry>();
       qss.forEach((doc) => {
         const entry = doc.data();
+        entry.id = doc.id;
         entry.date = new Date(entry.date);
-        entry.notes = '';
-        entry.version = 'Final';
-
+        if (!('notes' in doc.data())) entry.notes = '';
+        if (!('version' in doc.data())) entry.version = 'Final';
         loadentries.push(entry as RosterEntry);
       });
-      this.rosterAll = loadentries;
+      this.allEntries = loadentries;
       return loadentries.length;
     },
 
@@ -60,38 +130,72 @@ export const useRosterStore = defineStore('roster', {
       const loadentries = Array<RosterEntry>();
       qss.forEach((doc) => {
         const entry = doc.data();
+        entry.id = doc.id;
         entry.date = new Date(entry.date);
-        entry.notes = '';
-        entry.version = 'Final';
-
+        if (!('notes' in doc.data())) entry.notes = '';
+        if (!('version' in doc.data())) entry.version = 'Final';
         loadentries.push(entry as RosterEntry);
       });
-      this.rosterAll.push(...loadentries);
+      this.allEntries.push(...loadentries);
 
-      let initialState = true;
+      // let initialState = true;
 
-      // when receiving added, modified or removed changes - ignore initialState load
-      onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
-        if (initialState) {
-          initialState = false;
-        } else {
-          console.log('roster.onSnapShot');
-          const loadentries = Array<RosterEntry>();
-          snapshot.docChanges().forEach((change) => {
-            if (change.type == 'added')
-              loadentries.push(change.doc.data() as RosterEntry);
-          });
-          console.log('added entries', loadentries.length);
-          this.rosterAll.push(...loadentries);
-        }
-      });
+      // // when receiving added, modified or removed changes - ignore initialState load
+      // onSnapshot(q, (snapshot: QuerySnapshot<DocumentData>) => {
+      //   if (initialState) {
+      //     initialState = false;
+      //   } else {
+      //     console.log('roster.onSnapShot');
+      //     const loadentries = Array<RosterEntry>();
+      //     snapshot.docChanges().forEach((change) => {
+      //       if (change.type == 'added')
+      //         loadentries.push(change.doc.data() as RosterEntry);
+      //     });
+      //     console.log('added entries', loadentries.length);
+      //     this.allEntries.push(...loadentries);
+      //   }
+      // });
 
       return loadentries.length;
     },
     patchEntries(newEntries: Array<RosterEntry>) {
       this.$patch((state) => {
-        state.rosterAll.push(...newEntries);
+        state.allEntries.push(...newEntries);
       });
+    },
+
+    async addRosterEntry(entry: RosterData) {
+      const docRef = await addDoc(collection(getFirestore(), 'roster'), {
+        ...entry,
+        date: format(entry.date, 'yyyy-MM-dd'),
+      });
+      this.allEntries.push({ id: docRef.id, ...entry });
+    },
+
+    async setRosterEntry(id: string, setEntry: SetRosterEntry) {
+      const found = this.allEntries.find((entry) => entry.id == id);
+      if (found) {
+        if (setEntry.activity) found.activity = setEntry.activity;
+        if (setEntry.notes) found.notes = setEntry.notes;
+        if (setEntry.version) found.version = setEntry.version;
+        debugger;
+        const entryRef = doc(getFirestore(), 'roster', found.id);
+        await setDoc(entryRef, setEntry, { merge: true });
+      } else {
+        throw new Error(`rosterStore.setRosterEntry: id ${id} does not exist`);
+      }
+    },
+
+    async delRosterEntry(id: string) {
+      const foundIndex = this.allEntries.findIndex((entry) => entry.id == id);
+      if (foundIndex == -1) {
+        throw new Error(
+          `rosterStore.delRosterEntry: id ${id} does not exist in allEntries`
+        );
+      } else {
+        await deleteDoc(doc(getFirestore(), 'roster', id));
+        this.allEntries.splice(foundIndex, 1);
+      }
     },
   },
 });

@@ -1,9 +1,9 @@
-import { RosterEntry, Time } from '../models';
+import { RosterData, Time } from '../models';
 
 import rosterJson from './roster.json';
 // rosterData.forEach((entry) => (entry.date = new Date(entry.date)));
 
-export const rosterData: Array<RosterEntry> = rosterJson.map((entry) => ({
+export const rosterData: Array<RosterData> = rosterJson.map((entry) => ({
   date: new Date(entry.date),
   time: entry.time as Time,
   smo: entry.smo,

@@ -17,6 +17,7 @@ export const useMonthStore = defineStore('month', {
     dates: Array<Date>(),
     numWeeks: 1,
     showWeekend: false,
+    version: 'Final',
   }),
   getters: {
     monthName(): string {

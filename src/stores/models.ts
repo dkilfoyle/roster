@@ -1,6 +1,6 @@
 export type Time = 'AM' | 'PM';
 
-export interface RosterEntry {
+export interface RosterData {
   date: Date;
   time: Time;
   activity: string;
@@ -9,16 +9,21 @@ export interface RosterEntry {
   version: string;
 }
 
+export interface RosterEntry extends RosterData {
+  id: string;
+}
+
 export interface SearchRosterEntry {
-  date: Date;
-  time: Time;
-  activity?: string;
+  date?: Date;
+  time?: Time;
   smo?: string;
+  activity?: string;
+  version?: string;
 }
 export interface SetRosterEntry {
   activity?: string;
-  smo?: string;
   notes?: string;
+  version?: string;
 }
 
 export type RosterLookup = Record<string, Array<RosterEntry>>;

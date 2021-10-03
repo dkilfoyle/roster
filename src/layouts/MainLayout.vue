@@ -33,10 +33,10 @@
             </div>
             <div
               class="col"
-              v-if="store.monthVersion != 'Final'"
+              v-if="monthStore.version != 'Final'"
               style="color: greenyellow"
             >
-              {{ store.monthVersion }}
+              {{ monthStore.version }}
             </div>
           </div>
 

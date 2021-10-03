@@ -36,25 +36,25 @@
         <q-tab-panel name="assigned">
           <two-col-list
             :items="assignedSMOs"
-            @clickItem="(i) => toggleSMO(assignedSMOs[i])"
+            @clickItem="(i) => removeSMO(i)"
           ></two-col-list>
         </q-tab-panel>
         <q-tab-panel name="available">
           <two-col-list
             :items="availableSMOs"
-            @clickItem="(i) => toggleSMO(availableSMOs[i])"
+            @clickItem="(i) => addSMO(availableSMOs[i])"
           ></two-col-list>
         </q-tab-panel>
         <q-tab-panel name="unavailable">
           <two-col-list
             :items="unavailableSMOs"
-            @clickItem="(i) => toggleSMO(unavailableSMOs[i])"
+            @clickItem="(i) => addSMO(unavailableSMOs[i])"
           ></two-col-list>
         </q-tab-panel>
         <q-tab-panel name="others">
           <two-col-list
             :items="incapableSMOs"
-            @clickItem="(i) => toggleSMO(incapableSMOs[i])"
+            @clickItem="(i) => addSMO(incapableSMOs[i])"
           ></two-col-list>
         </q-tab-panel>
       </q-tab-panels>
@@ -85,6 +85,8 @@ import { isSunday, isFriday } from 'date-fns';
 import { Time } from '../stores/models';
 import { useSMOStore } from 'src/stores/smoStore';
 import { useActivityStore } from 'src/stores/activityStore';
+import { useRosterStore } from 'src/stores/rosterStore';
+import { useMonthStore } from 'src/stores/monthStore';
 
 export default defineComponent({
   // name: 'ComponentName'
@@ -107,6 +109,7 @@ export default defineComponent({
   setup(props) {
     const store = useStore();
     const smoStore = useSMOStore();
+    const rosterStore = useRosterStore();
     const activityStore = useActivityStore();
 
     const { dateStr, time, activityName } = toRefs(props);
@@ -114,14 +117,22 @@ export default defineComponent({
     const cellTab = ref('available');
     const smoPopup = ref(false);
 
-    const assignedSMOs = computed(() =>
-      store
-        .getAssignedSMOs(date.value, time.value, activityName.value)
-        .map((entry) => entry.smo)
+    const assignedEntries = computed(() =>
+      rosterStore.filter({
+        date: date.value,
+        time: time.value,
+        activity: activityName.value,
+      })
     );
+
+    const assignedSMOs = computed(() =>
+      assignedEntries.value.map((entry) => entry.smo)
+    );
+
     const isValidActivity = computed(() =>
       store.isValidActivity(date.value, time.value, activityName.value)
     );
+
     const isAllowedActivity = computed(() =>
       activityStore.isAllowedActivity(
         date.value,
@@ -166,23 +177,22 @@ export default defineComponent({
         .map((smo) => smo.name);
     });
 
-    const toggleSMO = (smoName: string) => {
-      if (assignedSMOs.value.some((smo) => smo == smoName)) {
-        store.delRosterEntry(
-          date.value,
-          time.value,
-          smoName,
-          activityName.value
-        );
-      } else
-        store.setRosterEntry(
-          {
-            date: date.value,
-            time: time.value,
-            activity: activityName.value,
-          },
-          { smo: smoName }
-        );
+    const removeSMO = (entryNum: number) => {
+      const rosterStore = useRosterStore();
+      void rosterStore.delRosterEntry(assignedEntries.value[entryNum].id);
+    };
+
+    const addSMO = (smoName: string) => {
+      const rosterStore = useRosterStore();
+      const monthStore = useMonthStore();
+      void rosterStore.addRosterEntry({
+        date: date.value,
+        time: time.value,
+        activity: activityName.value,
+        smo: smoName,
+        version: monthStore.version,
+        notes: '',
+      });
       smoPopup.value = false;
     };
 
@@ -240,7 +250,8 @@ export default defineComponent({
       tdHasTooltip,
       tdContent,
       tdClasses,
-      toggleSMO,
+      addSMO,
+      removeSMO,
     };
   },
 });

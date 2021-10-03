@@ -1,4 +1,5 @@
 import { eachWeekOfInterval, isMonday, nextMonday } from 'date-fns';
+import { Time } from './models';
 
 export const isSameDay = (d1: Date, d2: Date) => {
   return (
@@ -14,6 +15,10 @@ export const getEntryTimestamp = (date: Date, time: string) => {
     .getMonth()
     .toString()
     .padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}${time}`;
+};
+
+export const getEntryId = (date: Date, time: Time, smo: string) => {
+  return `${getEntryTimestamp(date, time)}_${smo}`;
 };
 
 export const getFirstMonday = (year: number, month: number) => {

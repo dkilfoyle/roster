@@ -124,7 +124,7 @@ export default defineComponent({
 
     const smoSummary = computed(() => {
       const smos = smoStore.smos.map((smo) => {
-        const entries = rosterStore.rosterAll.filter(
+        const entries = rosterStore.allEntries.filter(
           (entry) =>
             entry.smo == smo.name &&
             entry.date > store.summaryStartDate &&

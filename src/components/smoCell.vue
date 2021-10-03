@@ -6,18 +6,23 @@
           <div class="text-h8">Notes for {{ smoName }} on {{ dateStr }}</div>
         </q-card-section>
 
-        <q-card-section class="q-pt-none">
+        <q-card-section
+          v-for="entry in assignedEntries"
+          :key="entry.id"
+          class="q-pt-none"
+        >
           <q-input
             dense
-            v-model="mycomment"
+            v-model="entry.notes"
             autofocus
             @keyup.enter="prompt = false"
+            :label="entry.activity"
           />
         </q-card-section>
 
         <q-card-actions align="right" class="text-primary">
           <q-btn flat label="Cancel" v-close-popup />
-          <q-btn flat label="Save Note" @click="setComment" v-close-popup />
+          <q-btn flat label="Save Note" @click="saveNotes" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-menu>
@@ -57,25 +62,25 @@
         <q-tab-panel name="assigned">
           <two-col-list
             :items="assignedActivities"
-            @clickItem="(i) => toggleActivity(assignedActivities[i])"
+            @clickItem="(i) => removeActivity(i)"
           ></two-col-list>
         </q-tab-panel>
         <q-tab-panel name="available">
           <two-col-list
             :items="availableActivities"
-            @clickItem="(i) => toggleActivity(availableActivities[i])"
+            @clickItem="(i) => setActivity(availableActivities[i])"
           ></two-col-list>
         </q-tab-panel>
         <q-tab-panel name="unavailable">
           <two-col-list
             :items="unavailableActivities"
-            @clickItem="(i) => toggleActivity(unavailableActivities[i])"
+            @clickItem="(i) => setActivity(unavailableActivities[i])"
           ></two-col-list>
         </q-tab-panel>
         <q-tab-panel name="others">
           <two-col-list
             :items="incapableActivities"
-            @clickItem="(i) => toggleActivity(incapableActivities[i])"
+            @clickItem="(i) => setActivity(incapableActivities[i])"
           ></two-col-list>
         </q-tab-panel>
       </q-tab-panels>
@@ -98,7 +103,9 @@
         <p v-for="(reason, i) in isValidSMO.reasons" :key="i">
           {{ reason }}
         </p>
-        <p>{{ mycomment }}</p>
+        <p v-for="entry in assignedEntries" :key="entry.id">
+          {{ entry.notes }}
+        </p>
       </div>
     </q-tooltip>
     {{ tdContent }}
@@ -111,8 +118,10 @@ import twoColList from './twoColList.vue';
 import { useStore } from '../stores/store';
 import { useSMOStore } from '../stores/smoStore';
 import { isSunday, isFriday } from 'date-fns';
-import { Time } from '../stores/models';
+import { RosterEntry, Time } from '../stores/models';
 import { useActivityStore } from 'src/stores/activityStore';
+import { useRosterStore } from 'src/stores/rosterStore';
+import { useMonthStore } from 'src/stores/monthStore';
 
 export default defineComponent({
   // name: 'ComponentName'
@@ -130,57 +139,60 @@ export default defineComponent({
       type: String,
       required: true,
     },
-    comment: {
-      type: String,
-      default: '',
-    },
   },
   components: { twoColList },
   setup(props) {
-    const { dateStr, time, smoName, comment } = toRefs(props);
+    const { dateStr, time, smoName } = toRefs(props);
     const date = ref(new Date(dateStr.value));
 
     const store = useStore();
     const smoStore = useSMOStore();
     const activityStore = useActivityStore();
+    const rosterStore = useRosterStore();
+
+    const assignedEntries = computed(() => {
+      return rosterStore.filter({
+        date: date.value,
+        time: time.value,
+        smo: smoName.value,
+      });
+    });
 
     const activityMenu = ref(false);
 
-    const mycomment = ref(comment.value);
-    const setComment = () => {
-      assignedActivities.value.forEach((activity) =>
-        store.setRosterEntry(
-          {
-            date: date.value,
-            time: time.value,
-            smo: smoName.value,
-            activity: activity,
-          },
-          { notes: mycomment.value }
-        )
+    const saveNotes = () => {
+      assignedEntries.value.forEach(
+        (entry) =>
+          void rosterStore.setRosterEntry(entry.id, { notes: entry.notes })
       );
     };
 
     const cellTab = ref('available');
-    const toggleActivity = (activityName: string) => {
-      if (
-        assignedActivities.value.some((activity) => activity == activityName)
-      ) {
-        store.delRosterEntry(
-          date.value,
-          time.value,
-          smoName.value,
-          activityName
-        );
-      } else
-        store.setRosterEntry(
-          {
-            date: date.value,
-            time: time.value,
-            smo: smoName.value,
-          },
-          { activity: activityName }
-        );
+
+    const removeActivity = (activityNum: number) => {
+      void rosterStore.delRosterEntry(assignedEntries.value[activityNum].id);
+    };
+
+    const setActivity = (activityName: string) => {
+      // setActivity replaces only the first activity if there are multiple assigned activities
+      if (assignedEntries.value.length) {
+        void rosterStore.setRosterEntry(assignedEntries.value[0].id, {
+          activity: activityName,
+        });
+      } else addActivity(activityName);
+      activityMenu.value = false;
+    };
+
+    const addActivity = (activityName: string) => {
+      const monthStore = useMonthStore();
+      void rosterStore.addRosterEntry({
+        smo: smoName.value,
+        date: date.value,
+        time: time.value,
+        activity: activityName,
+        notes: '',
+        version: monthStore.version,
+      });
       activityMenu.value = false;
     };
 
@@ -188,10 +200,6 @@ export default defineComponent({
 
     const allowedActivities = computed(
       () => smoStore.getSMO(smoName.value).activities
-    );
-
-    const assignedEntries = computed(() =>
-      store.getAssignedActivities(date.value, time.value, smoName.value)
     );
 
     const assignedActivities = computed(() =>
@@ -227,11 +235,15 @@ export default defineComponent({
       else return activities.length;
     });
 
+    const tdHasNotes = computed(() => {
+      return assignedEntries.value.some((entry) => entry.notes != '');
+    });
+
     const tdHasTooltip = computed(() => {
       return (
         isValidSMO.value.reasons.length ||
         assignedActivities.value.length > 1 ||
-        mycomment.value != ''
+        tdHasNotes.value
       );
     });
 
@@ -247,7 +259,7 @@ export default defineComponent({
             ['WDHB', 'NCT', 'UNI', 'CDHB', 'A+T'].includes(
               assignedActivities.value[0]
             ),
-          note: mycomment.value != '',
+          note: tdHasNotes.value,
         },
       ];
 
@@ -268,11 +280,12 @@ export default defineComponent({
     });
 
     return {
-      mycomment,
-      setComment,
+      saveNotes,
       cellTab,
       activityMenu,
-      toggleActivity,
+      addActivity,
+      removeActivity,
+      setActivity,
       assignedEntries,
       availableActivities,
       unavailableActivities,
@@ -283,6 +296,7 @@ export default defineComponent({
       tdHasTooltip,
       tdContent,
       tdClasses,
+      date,
     };
   },
 });

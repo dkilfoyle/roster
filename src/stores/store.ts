@@ -4,21 +4,11 @@ import { useActivityStore } from './activityStore';
 import { useRosterStore } from './rosterStore';
 import { useMonthStore } from './monthStore';
 
-import {
-  RosterEntry,
-  SearchRosterEntry,
-  SetRosterEntry,
-  RosterLookup,
-  Time,
-} from './models';
-
+import { Time } from './models';
 import { holidays } from './holidays';
-
 import { User, getAuth } from 'firebase/auth';
-
 import { addDays } from 'date-fns';
-
-import { getEntryTimestamp, isSameDay } from './utils';
+import { isSameDay } from './utils';
 
 import { LoadingBar, Notify } from 'quasar';
 import { FirebaseApp } from 'firebase/app';
@@ -30,7 +20,6 @@ LoadingBar.setDefaults({
 
 export const useStore = defineStore('main', {
   state: () => ({
-    monthVersion: 'Final',
     showWeekend: false,
     compiled: false,
     summaryLoaded: false,
@@ -47,40 +36,10 @@ export const useStore = defineStore('main', {
     },
   }),
   getters: {
-    roster(state): Array<RosterEntry> {
-      const rosterStore = useRosterStore();
-      const monthStore = useMonthStore();
-      return state.compiled
-        ? rosterStore.rosterAll.filter(
-            (entry) =>
-              entry.date >= monthStore.startDate &&
-              entry.date <= monthStore.endDate &&
-              entry.version == state.monthVersion
-          )
-        : [];
-    },
-    rosterDateTime(): RosterLookup {
-      return this.roster.reduce((lookupTable, entry) => {
-        const id = getEntryTimestamp(entry.date, entry.time);
-        if (lookupTable[id]) lookupTable[id].push(entry);
-        else lookupTable[id] = [entry];
-        return lookupTable;
-      }, <RosterLookup>{});
-    },
-
-    rosterVersions(): Array<string> {
-      const rosterStore = useRosterStore();
-      const monthStore = useMonthStore();
-      return rosterStore.rosterAll.reduce((versions, entry) => {
-        if (
-          entry.date >= monthStore.startDate &&
-          entry.date <= monthStore.endDate &&
-          !versions.includes(entry.version)
-        )
-          versions.push(entry.version);
-        return versions;
-      }, Array<string>());
-    },
+    // roster(state): Array<RosterEntry> {
+    //   const rosterStore = useRosterStore();
+    //   return state.compiled ? rosterStore.monthEntries : [];
+    // },
 
     isUserSignedIn(state) {
       return getAuth(state.firebaseApp).currentUser;
@@ -104,7 +63,9 @@ export const useStore = defineStore('main', {
   actions: {
     async setUser(e: User): Promise<void> {
       console.log('store.setUser: ', e.displayName);
+
       const smoStore = useSMOStore();
+      const monthStore = useMonthStore();
       const activityStore = useActivityStore();
 
       if (e !== null) {
@@ -119,7 +80,6 @@ export const useStore = defineStore('main', {
         //   message: `Loaded ${smoStore.smos.length} smos, ${activityStore.activities.length} activities`,
         // });
         this.user = e.displayName || '';
-        const monthStore = useMonthStore();
         void monthStore.setMonth(
           new Date().getFullYear(),
           new Date().getMonth()
@@ -134,14 +94,18 @@ export const useStore = defineStore('main', {
       // 2. compile activity for month
       // 3. compile smos for month
       // 4. Set compiled flag
-      this.compiled = false;
+
+      const smoStore = useSMOStore();
       const monthStore = useMonthStore();
+      const activityStore = useActivityStore();
+      const rosterStore = useRosterStore();
+
+      this.compiled = false;
       console.log('onNewMonth', monthStore.monthName);
 
       if (!this.loadedMonths.includes(monthStore.monthName)) {
         this.loadedMonths.push(monthStore.monthName);
 
-        const rosterStore = useRosterStore();
         const loaded = await rosterStore.loadFromFirestore(
           monthStore.startDate,
           monthStore.endDate
@@ -152,29 +116,26 @@ export const useStore = defineStore('main', {
         // });
       }
 
-      const activityStore = useActivityStore();
       activityStore.compile(monthStore.startDate, monthStore.endDate);
-
-      const smoStore = useSMOStore();
       smoStore.compile(monthStore.dates);
-
       this.compiled = true;
     },
 
     doCreateVersion(newVersionName: string) {
       console.log('doCreateVersion', newVersionName);
       console.log('Creating new entries');
-      const newEntries = this.roster.map((entry) => ({
-        ...entry,
-        version: newVersionName,
-      }));
-      console.log('Patching new entries');
+
+      const monthStore = useMonthStore();
       const rosterStore = useRosterStore();
-      rosterStore.patchEntries(newEntries);
 
+      rosterStore.monthEntries.forEach((entry) => {
+        void rosterStore.addRosterEntry({
+          ...entry,
+          version: newVersionName,
+        });
+      });
       console.log('Done');
-
-      this.monthVersion = newVersionName;
+      monthStore.version = newVersionName;
     },
     doFinaliseVersion() {
       console.log('doFinaliseVersion');
@@ -190,121 +151,17 @@ export const useStore = defineStore('main', {
       );
       const smoStore = useSMOStore();
       const monthStore = useMonthStore();
+      const rosterStore = useRosterStore();
+
       smoStore
         .getNCTEntries(monthStore.startDate, monthStore.endDate)
         .forEach((entry) => {
-          this.setRosterEntry(
-            {
-              date: entry.date,
-              time: entry.time,
-              smo: entry.smo,
-            },
-            {
-              activity: entry.activity,
-            }
-          );
+          void rosterStore.addRosterEntry({
+            ...entry,
+            notes: '',
+            version: monthStore.version,
+          });
         });
-    },
-
-    getRosterAtTime(date: Date, time: string) {
-      const id = getEntryTimestamp(date, time);
-      return this.rosterDateTime[id] || [];
-    },
-
-    /**
-     * set activity for date/time/smo, create new roster entry if needed
-     */
-    addRosterEntry(
-      date: Date,
-      time: Time,
-      smoName: string,
-      activityName: string
-    ) {
-      const found = this.getRosterAtTime(date, time).find(
-        (entry) => entry.smo == smoName && entry.activity == activityName
-      );
-      if (found) {
-        throw new Error(
-          `Roster entry already exists for ${date.toString()}:${time} ${smoName}, ${activityName}`
-        );
-      } else {
-        const rosterStore = useRosterStore();
-        rosterStore.rosterAll.push({
-          date,
-          time,
-          smo: smoName,
-          activity: activityName,
-          notes: '',
-          version: this.monthVersion,
-        });
-      }
-    },
-
-    /**
-     * Set the entry specificed by searchEntry to the values specified in setEntry, if searchEntry not matched create a new entry
-     * @param searchEntry
-     * @param setEntry
-     */
-    setRosterEntry(searchEntry: SearchRosterEntry, setEntry: SetRosterEntry) {
-      if (!searchEntry.smo && !searchEntry.activity)
-        throw new Error('searchEntry must include either smo or activity');
-      const found = this.getRosterAtTime(
-        searchEntry.date,
-        searchEntry.time
-      ).find((entry) => {
-        return (
-          (searchEntry.activity
-            ? entry.activity == searchEntry.activity
-            : true) && (searchEntry.smo ? entry.smo == searchEntry.smo : true)
-        );
-      });
-      if (found) {
-        if (setEntry.smo) found.smo = setEntry.smo;
-        if (setEntry.activity) found.activity = setEntry.activity;
-        if (setEntry.notes) found.notes = setEntry.notes;
-      } else {
-        const smo = searchEntry.smo || setEntry.smo;
-        if (!smo) throw new Error('smo must be in searchEntry and/or setEntry');
-        const activity = searchEntry.activity || setEntry.activity;
-        if (!activity)
-          throw new Error('activity must be in searchEntry and/or setEntry');
-
-        const rosterStore = useRosterStore();
-        rosterStore.rosterAll.push({
-          date: searchEntry.date,
-          time: searchEntry.time,
-          smo,
-          activity,
-          notes: setEntry.notes ? setEntry.notes : '',
-          version: this.monthVersion,
-        });
-      }
-    },
-
-    /**
-     * Delete roster entry date/time/smo/activity
-     */
-    delRosterEntry(
-      date: Date,
-      time: Time,
-      smoName: string,
-      activityName: string
-    ) {
-      const rosterStore = useRosterStore();
-      const foundIndex = rosterStore.rosterAll.findIndex(
-        (entry) =>
-          isSameDay(entry.date, date) &&
-          entry.time == time &&
-          entry.smo == smoName &&
-          entry.activity == activityName
-      );
-      if (foundIndex == -1) {
-        throw new Error(
-          `Entry does not exist ${date.toString()}:${time} for ${smoName}, ${activityName}`
-        );
-      } else {
-        rosterStore.rosterAll.splice(foundIndex, 1);
-      }
     },
 
     isHoliday(date: Date) {
@@ -312,16 +169,17 @@ export const useStore = defineStore('main', {
     },
 
     getActivitySum(activityName: string) {
-      return this.roster.filter((entry) => entry.activity == activityName)
-        .length;
+      const rosterStore = useRosterStore();
+      return rosterStore.filter({ activity: activityName }).length;
     },
 
     // ActivityView utilities
 
     getAssignedSMOs(date: Date, time: Time, activityName: string) {
-      return this.getRosterAtTime(date, time).filter(
-        (entry) => entry.activity == activityName
-      );
+      const rosterStore = useRosterStore();
+      return rosterStore
+        .getRosterAtTime(date, time)
+        .filter((entry) => entry.activity == activityName);
     },
 
     /**
@@ -338,14 +196,15 @@ export const useStore = defineStore('main', {
       };
 
       const activityStore = useActivityStore();
+      const rosterStore = useRosterStore();
 
       const foundMatches = {
-        AM: this.getRosterAtTime(date, 'AM').filter(
-          (entry) => entry.activity == activityName
-        ),
-        PM: this.getRosterAtTime(date, 'PM').filter(
-          (entry) => entry.activity == activityName
-        ),
+        AM: rosterStore
+          .getRosterAtTime(date, 'AM')
+          .filter((entry) => entry.activity == activityName),
+        PM: rosterStore
+          .getRosterAtTime(date, 'PM')
+          .filter((entry) => entry.activity == activityName),
       };
 
       const foundTimeMatches = foundMatches[time].length;
@@ -416,9 +275,10 @@ export const useStore = defineStore('main', {
     // SmoView utilities
 
     getAssignedActivities(date: Date, time: Time, smoName: string) {
-      return this.getRosterAtTime(date, time).filter(
-        (entry) => entry.smo == smoName && entry.activity != 'Call'
-      );
+      const rosterStore = useRosterStore();
+      return rosterStore
+        .getRosterAtTime(date, time)
+        .filter((entry) => entry.smo == smoName && entry.activity != 'Call');
     },
 
     /**
