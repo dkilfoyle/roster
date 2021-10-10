@@ -5,7 +5,7 @@
         <tr>
           <th></th>
           <th></th>
-          <th v-for="date in monthStore.dates" :key="date">
+          <th v-for="date in monthStore.dates" :key="date.toDateString()">
             {{ format(date, 'dd') }}
           </th>
         </tr>
@@ -53,7 +53,7 @@
             ></q-btn>
           </th>
           <th></th>
-          <th v-for="date in monthStore.dates" :key="date">
+          <th v-for="date in monthStore.dates" :key="date.toDateString()">
             {{ format(date, 'ccccc') }}
           </th>
         </tr>
@@ -69,7 +69,7 @@
           </td>
           <smo-cell
             v-for="date in monthStore.dates"
-            :key="date"
+            :key="date.toDateString()"
             :dateStr="date.toDateString()"
             :time="i % 2 ? 'PM' : 'AM'"
             :smoName="smo.name"

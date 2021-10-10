@@ -44,8 +44,8 @@
       ></q-select>
     </div>
     <q-select
-      v-model="store.monthVersion"
-      :options="store.rosterVersions"
+      v-model="monthStore.version"
+      :options="rosterStore.monthVersions"
       label="Version"
       dense
       filled
@@ -57,7 +57,7 @@
                 ><q-item-section>Add new</q-item-section></q-item
               >
               <q-item
-                v-if="store.monthVersion != 'Final'"
+                v-if="monthStore.version != 'Final'"
                 clickable
                 v-close-popup
                 @click="finaliseVersion = true"
@@ -101,7 +101,7 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none">
-          This will make "{{ store.monthVersion }}" the final version. This will
+          This will make "{{ monthStore.version }}" the final version. This will
           OVERWRITE the existing final version. If you want to keep a backup of
           the current final version then cancel this operation and add a new
           copy of final.
@@ -125,7 +125,7 @@
         </q-card-section>
 
         <q-card-section class="q-pt-none">
-          This will delete "{{ store.monthVersion }}" permanently. Are you
+          This will delete "{{ monthStore.version }}" permanently. Are you
           sure?"
         </q-card-section>
 
@@ -178,12 +178,14 @@ import { defineComponent, reactive, watch, toRefs } from 'vue';
 import { format } from 'date-fns';
 import { useStore } from '../stores/store';
 import { useMonthStore } from '../stores/monthStore';
+import { useRosterStore } from '../stores/rosterStore';
 
 export default defineComponent({
   // name: 'ComponentName'
   setup() {
     const store = useStore();
     const monthStore = useMonthStore();
+    const rosterStore = useRosterStore();
 
     const state = reactive({
       confirmNCT: false,
@@ -197,7 +199,7 @@ export default defineComponent({
 
     watch(
       () => monthStore.startDate,
-      (newVal) => {
+      () => {
         // console.log('monthOptions.watch(monthStore.startDate)', newVal);
         void store.onNewMonth();
       }
@@ -215,6 +217,7 @@ export default defineComponent({
       ...toRefs(state),
       store,
       monthStore,
+      rosterStore,
       format,
     };
   },

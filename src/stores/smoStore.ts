@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { RosterData, RosterEntry, SMODefinition, Time } from './models';
+import { RosterData, SMODefinition, Time } from './models';
 // import { smoData } from './data/smoData';
 
 import { parseRRule, isSameDay } from './utils';

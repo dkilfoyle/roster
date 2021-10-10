@@ -118,7 +118,7 @@ import twoColList from './twoColList.vue';
 import { useStore } from '../stores/store';
 import { useSMOStore } from '../stores/smoStore';
 import { isSunday, isFriday } from 'date-fns';
-import { RosterEntry, Time } from '../stores/models';
+import { Time } from '../stores/models';
 import { useActivityStore } from 'src/stores/activityStore';
 import { useRosterStore } from 'src/stores/rosterStore';
 import { useMonthStore } from 'src/stores/monthStore';
