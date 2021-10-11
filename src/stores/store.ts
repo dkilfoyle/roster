@@ -62,7 +62,7 @@ export const useStore = defineStore('main', {
   },
   actions: {
     async setUser(e: User): Promise<void> {
-      console.log('store.setUser: ', e.displayName);
+      console.log('store.setUser: ', e.displayName, e.uid);
 
       const smoStore = useSMOStore();
       const monthStore = useMonthStore();

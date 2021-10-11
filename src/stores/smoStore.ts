@@ -28,7 +28,7 @@ export const useSMOStore = defineStore('smo', {
   state: () => ({
     smos: [] as Array<SMODefinition>,
     viewOptions: {
-      showErrors: true,
+      showColors: 'errors',
       showSummary: true,
       showEMG: true,
       showEEG: true,

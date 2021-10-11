@@ -6,16 +6,12 @@
           <div class="text-h8">Notes for {{ smoName }} on {{ dateStr }}</div>
         </q-card-section>
 
-        <q-card-section
-          v-for="entry in assignedEntries"
-          :key="entry.id"
-          class="q-pt-none"
-        >
+        <q-card-section v-for="entry in assignedEntries" :key="entry.id" class="q-pt-none">
           <q-input
             dense
             v-model="entry.notes"
             autofocus
-            @keyup.enter="prompt = false"
+            @keyup.enter="saveNotes"
             :label="entry.activity"
           />
         </q-card-section>
@@ -27,43 +23,40 @@
       </q-card>
     </q-menu>
     <q-menu style="min-height: 300px" v-model="activityMenu">
-      <div class="text-center q-pa-md bg-info q-mb-sm">
-        {{ smoName }} on {{ dateStr }}
-      </div>
+      <div class="text-center q-pa-md bg-info q-mb-sm">{{ smoName }} on {{ dateStr }}</div>
 
       <q-tabs v-model="cellTab" class="q-mt-md">
-        <q-tab name="assigned" label="Cur"
-          ><q-badge
+        <q-tab name="assigned" label="Cur">
+          <q-badge
             :color="assignedActivities.length > 0 ? 'green' : 'red'"
             floating
-            >{{ assignedActivities.length }}</q-badge
-          ></q-tab
-        >
-        <q-tab name="available" label="Avail"
-          ><q-badge
+          >{{ assignedActivities.length }}</q-badge>
+        </q-tab>
+        <q-tab name="available" label="Avail">
+          <q-badge
             :color="availableActivities.length > 0 ? 'green' : 'red'"
             floating
-            >{{ availableActivities.length }}</q-badge
-          ></q-tab
-        >
-        <q-tab name="unavailable" label="Unavail"
-          ><q-badge color="red" floating>{{
-            unavailableActivities.length
-          }}</q-badge></q-tab
-        >
-        <q-tab name="others" label="Others"
-          ><q-badge color="amber" floating>{{
-            incapableActivities.length
-          }}</q-badge></q-tab
-        >
+          >{{ availableActivities.length }}</q-badge>
+        </q-tab>
+        <q-tab name="unavailable" label="Unavail">
+          <q-badge color="red" floating>
+            {{
+              unavailableActivities.length
+            }}
+          </q-badge>
+        </q-tab>
+        <q-tab name="others" label="Others">
+          <q-badge color="amber" floating>
+            {{
+              incapableActivities.length
+            }}
+          </q-badge>
+        </q-tab>
       </q-tabs>
       <q-separator></q-separator>
       <q-tab-panels v-model="cellTab" animated>
         <q-tab-panel name="assigned">
-          <two-col-list
-            :items="assignedActivities"
-            @clickItem="(i) => removeActivity(i)"
-          ></two-col-list>
+          <two-col-list :items="assignedActivities" @clickItem="(i) => removeActivity(i)"></two-col-list>
         </q-tab-panel>
         <q-tab-panel name="available">
           <two-col-list
@@ -96,16 +89,12 @@
           <q-item-section>{{ activityName }}</q-item-section>
         </q-item>
       </q-list>
-    </q-menu> -->
+    </q-menu>-->
     <q-tooltip v-if="tdHasTooltip">
       <div class="tdtooltip">
         {{ assignedActivities.map((smo) => smo).join(', ') }}
-        <p v-for="(reason, i) in isValidSMO.reasons" :key="i">
-          {{ reason }}
-        </p>
-        <p v-for="entry in assignedEntries" :key="entry.id">
-          {{ entry.notes }}
-        </p>
+        <p v-for="(reason, i) in isValidSMO.reasons" :key="i">{{ reason }}</p>
+        <p v-for="entry in assignedEntries" :key="entry.id">{{ entry.notes }}</p>
       </div>
     </q-tooltip>
     {{ tdContent }}
@@ -263,20 +252,37 @@ export default defineComponent({
         },
       ];
 
-      if (!smoStore.viewOptions.showErrors || isHoliday.value) return classes;
+      if (smoStore.viewOptions.showColors == 'none' || isHoliday.value) return classes;
+      else if (smoStore.viewOptions.showColors == 'errors') {
+        const invalidSMO = (myreason: string) =>
+          !isValidSMO.value.answer &&
+          isValidSMO.value.reasons.some((reason) => reason.includes(myreason));
+        return classes.concat([
+          { invalid: !isValidSMO.value.answer },
+          { invalid1: invalidSMO('is already assigned') },
+          { invalid1: invalidSMO('awaiting assignment') },
+          { invalid3: invalidSMO('is not contracted') },
+          { invalid4: invalidSMO('is not an allowed activity') },
 
-      const invalidSMO = (myreason: string) =>
-        !isValidSMO.value.answer &&
-        isValidSMO.value.reasons.some((reason) => reason.includes(myreason));
-      return classes.concat([
-        { invalid: !isValidSMO.value.answer },
-        { invalid1: invalidSMO('is already assigned') },
-        { invalid1: invalidSMO('awaiting assignment') },
-        { invalid3: invalidSMO('is not contracted') },
-        { invalid4: invalidSMO('is not an allowed activity') },
-
-        // `week-${Math.floor(differenceInDays(date, store.startDate) / 7) % 2}`,
-      ]);
+          // `week-${Math.floor(differenceInDays(date, store.startDate) / 7) % 2}`,
+        ]);
+      }
+      else {
+        return classes.concat({
+          act_btx: assignedActivities.value[0] == 'BTX',
+          act_cme: assignedActivities.value[0] == 'CME',
+          act_anl: assignedActivities.value[0] == 'ANL',
+          act_tnp: assignedActivities.value[0] == 'TNP',
+          act_dbs: assignedActivities.value[0] == 'DBS',
+          act_ms: assignedActivities.value[0] == 'MS',
+          act_wre: assignedActivities.value[0] == 'WRE',
+          act_tbh: assignedActivities.value[0] == 'TBH',
+          act_crs: assignedActivities.value[0] == 'CRS',
+          act_crsgp: assignedActivities.value[0] == 'CRS+GP',
+          act_crsact: assignedActivities.value[0] == 'CRS+ACT',
+          act_pcl: assignedActivities.value[0] == 'PCL',
+        });
+      }
     });
 
     return {

@@ -5,68 +5,41 @@
         <tr>
           <th></th>
           <th></th>
-          <th v-for="date in monthStore.dates" :key="date.toDateString()">
-            {{ format(date, 'dd') }}
-          </th>
+          <th v-for="date in monthStore.dates" :key="date.toDateString()">{{ format(date, 'dd') }}</th>
         </tr>
         <tr class="pm-row">
           <th>
-            <q-btn icon="filter_alt" size="sm"
-              ><q-menu>
+            <q-btn icon="filter_alt" size="sm">
+              <q-menu>
                 <div class="row q-pa-md">
                   <div class="column">
-                    <q-btn @click="showAll" size="sm" class="q-mb-md"
-                      >All</q-btn
-                    >
-                    <q-checkbox
-                      v-model="smoStore.viewOptions.showCall"
-                      label="Call"
-                      size="sm"
-                    />
-                    <q-checkbox
-                      v-model="smoStore.viewOptions.showWard"
-                      label="Wards"
-                      size="sm"
-                    />
-                    <q-checkbox
-                      v-model="smoStore.viewOptions.showEMG"
-                      label="EMG"
-                      size="sm"
-                    />
-                    <q-checkbox
-                      v-model="smoStore.viewOptions.showEEG"
-                      label="EEG"
-                      size="sm"
-                    />
-                    <q-checkbox
-                      v-model="smoStore.viewOptions.showWDHB"
-                      label="WDHB"
-                      size="sm"
-                    />
-                    <q-checkbox
-                      v-model="smoStore.viewOptions.showCDHB"
-                      label="CMDHB"
-                      size="sm"
-                    />
+                    <q-btn @click="showAll" size="sm" class="q-mb-md">All</q-btn>
+                    <q-checkbox v-model="smoStore.viewOptions.showCall" label="Call" size="sm" />
+                    <q-checkbox v-model="smoStore.viewOptions.showWard" label="Wards" size="sm" />
+                    <q-checkbox v-model="smoStore.viewOptions.showEMG" label="EMG" size="sm" />
+                    <q-checkbox v-model="smoStore.viewOptions.showEEG" label="EEG" size="sm" />
+                    <q-checkbox v-model="smoStore.viewOptions.showWDHB" label="WDHB" size="sm" />
+                    <q-checkbox v-model="smoStore.viewOptions.showCDHB" label="CMDHB" size="sm" />
                   </div>
-                </div> </q-menu
-            ></q-btn>
+                </div>
+              </q-menu>
+            </q-btn>
           </th>
           <th></th>
-          <th v-for="date in monthStore.dates" :key="date.toDateString()">
-            {{ format(date, 'ccccc') }}
-          </th>
+          <th
+            v-for="date in monthStore.dates"
+            :key="date.toDateString()"
+          >{{ format(date, 'ccccc') }}</th>
         </tr>
       </thead>
       <transition-group name="smotable" tag="tbody">
         <tr
           v-for="(smo, i) in smoStore.filteredSMOs2"
           :key="smo.name + (i % 2)"
+          :class="i % 2 ? 'pm-row' : ''"
         >
           <td>{{ i % 2 ? '' : smo.name }}</td>
-          <td style="border-right: 2px solid black">
-            {{ i % 2 ? 'PM' : 'AM' }}
-          </td>
+          <td style="border-right: 2px solid black">{{ i % 2 ? 'PM' : 'AM' }}</td>
           <smo-cell
             v-for="date in monthStore.dates"
             :key="date.toDateString()"
@@ -118,7 +91,7 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-@import '../css/calendar.scss';
+@import "../css/calendar.scss";
 
 .sticky-column-table {
   table {

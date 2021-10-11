@@ -1,76 +1,56 @@
 <template>
   <td :class="tdClasses">
     <q-menu style="min-height: 300px" v-model="smoPopup">
-      <div class="text-center q-pa-md bg-info q-mb-sm">
-        {{ activityName }} on {{ dateStr }}
-      </div>
+      <div class="text-center q-pa-md bg-info q-mb-sm">{{ activityName }} on {{ dateStr }}</div>
 
       <q-tabs v-model="cellTab" class="q-mt-md">
-        <q-tab name="assigned" label="Cur"
-          ><q-badge
+        <q-tab name="assigned" label="Cur">
+          <q-badge
             :color="assignedSMOs.length > 0 ? 'green' : 'red'"
             floating
-            >{{ assignedSMOs.length }}</q-badge
-          ></q-tab
-        >
-        <q-tab name="available" label="Avail"
-          ><q-badge
+          >{{ assignedSMOs.length }}</q-badge>
+        </q-tab>
+        <q-tab name="available" label="Avail">
+          <q-badge
             :color="availableSMOs.length > 0 ? 'green' : 'red'"
             floating
-            >{{ availableSMOs.length }}</q-badge
-          ></q-tab
-        >
-        <q-tab name="unavailable" label="Unavail"
-          ><q-badge color="red" floating>{{
-            unavailableSMOs.length
-          }}</q-badge></q-tab
-        >
-        <q-tab name="others" label="Others"
-          ><q-badge color="amber" floating>{{
-            incapableSMOs.length
-          }}</q-badge></q-tab
-        >
+          >{{ availableSMOs.length }}</q-badge>
+        </q-tab>
+        <q-tab name="unavailable" label="Unavail">
+          <q-badge color="red" floating>
+            {{
+              unavailableSMOs.length
+            }}
+          </q-badge>
+        </q-tab>
+        <q-tab name="others" label="Others">
+          <q-badge color="amber" floating>
+            {{
+              incapableSMOs.length
+            }}
+          </q-badge>
+        </q-tab>
       </q-tabs>
       <q-separator></q-separator>
       <q-tab-panels v-model="cellTab" animated>
         <q-tab-panel name="assigned">
-          <two-col-list
-            :items="assignedSMOs"
-            @clickItem="(i) => removeSMO(i)"
-          ></two-col-list>
+          <two-col-list :items="assignedSMOs" @clickItem="(i) => removeSMO(i)"></two-col-list>
         </q-tab-panel>
         <q-tab-panel name="available">
-          <two-col-list
-            :items="availableSMOs"
-            @clickItem="(i) => addSMO(availableSMOs[i])"
-          ></two-col-list>
+          <two-col-list :items="availableSMOs" @clickItem="(i) => addSMO(availableSMOs[i])"></two-col-list>
         </q-tab-panel>
         <q-tab-panel name="unavailable">
-          <two-col-list
-            :items="unavailableSMOs"
-            @clickItem="(i) => addSMO(unavailableSMOs[i])"
-          ></two-col-list>
+          <two-col-list :items="unavailableSMOs" @clickItem="(i) => addSMO(unavailableSMOs[i])"></two-col-list>
         </q-tab-panel>
         <q-tab-panel name="others">
-          <two-col-list
-            :items="incapableSMOs"
-            @clickItem="(i) => addSMO(incapableSMOs[i])"
-          ></two-col-list>
+          <two-col-list :items="incapableSMOs" @clickItem="(i) => addSMO(incapableSMOs[i])"></two-col-list>
         </q-tab-panel>
       </q-tab-panels>
     </q-menu>
     <q-tooltip v-if="tdHasTooltip">
       <div class="tdtooltip">
-        <div class="col">
-          {{ assignedSMOs.map((smo) => smo).join(', ') }}
-        </div>
-        <div
-          class="col"
-          v-for="(reason, i) in isValidActivity.reasons"
-          :key="i"
-        >
-          {{ reason }}
-        </div>
+        <div class="col">{{ assignedSMOs.map((smo) => smo).join(', ') }}</div>
+        <div class="col" v-for="(reason, i) in isValidActivity.reasons" :key="i">{{ reason }}</div>
       </div>
     </q-tooltip>
     {{ tdContent }}

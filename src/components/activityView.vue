@@ -5,15 +5,13 @@
         <tr>
           <th></th>
           <th></th>
-          <th v-for="date in monthStore.dates" :key="date">
-            {{ format(date, 'dd') }}
-          </th>
+          <th v-for="date in monthStore.dates" :key="date.toDateString()">{{ format(date, 'dd') }}</th>
           <th v-if="activityStore.viewOptions.showSummary">Sum</th>
         </tr>
         <tr class="pm-row">
           <th>
-            <q-btn icon="filter_alt" size="sm"
-              ><q-menu>
+            <q-btn icon="filter_alt" size="sm">
+              <q-menu>
                 <div class="row q-pa-md">
                   <div class="column">
                     <q-checkbox
@@ -52,27 +50,26 @@
                       size="sm"
                     />
                   </div>
-                </div> </q-menu
-            ></q-btn>
+                </div>
+              </q-menu>
+            </q-btn>
           </th>
           <th></th>
-          <th v-for="date in monthStore.dates" :key="date">
-            {{ format(date, 'ccccc') }}
-          </th>
+          <th
+            v-for="date in monthStore.dates"
+            :key="date.toDateString()"
+          >{{ format(date, 'ccccc') }}</th>
           <th v-if="activityStore.viewOptions.showSummary"></th>
         </tr>
       </thead>
       <tbody>
-        <template
-          v-for="(activity, i) in activityStore.filteredActivities"
-          :key="activity"
-        >
+        <template v-for="(activity, i) in activityStore.filteredActivities" :key="activity">
           <tr :class="`row-${i % 2}`">
             <td>{{ activity.name }}</td>
             <td style="border-right: 2px solid black">AM</td>
             <activity-cell
               v-for="date in monthStore.dates"
-              :key="date"
+              :key="date.toDateString()"
               :dateStr="date.toDateString()"
               time="AM"
               :activityName="activity.name"
@@ -80,16 +77,14 @@
             <td
               v-if="activityStore.viewOptions.showSummary"
               :class="{ invalid5: sumError(activity.name) }"
-            >
-              {{ store.getActivitySum(activity.name) }}
-            </td>
+            >{{ store.getActivitySum(activity.name) }}</td>
           </tr>
           <tr :class="`row-${i % 2} pm-row`">
             <td></td>
             <td style="border-right: 2px solid black">PM</td>
             <activity-cell
               v-for="date in monthStore.dates"
-              :key="date"
+              :key="date.toDateString()"
               :dateStr="date.toDateString()"
               time="PM"
               :activityName="activity.name"
@@ -144,7 +139,7 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-@import '../css/calendar.scss';
+@import "../css/calendar.scss";
 td.invalid5 {
   background: $deep-orange-3;
 }

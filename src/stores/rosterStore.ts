@@ -47,14 +47,8 @@ export const useRosterStore = defineStore('roster', {
       }, <RosterLookup>{});
     },
     monthVersions(): Array<string> {
-      const monthStore = useMonthStore();
       return this.monthEntries.reduce((versions, entry) => {
-        if (
-          entry.date >= monthStore.startDate &&
-          entry.date <= monthStore.endDate &&
-          !versions.includes(entry.version)
-        )
-          versions.push(entry.version);
+        if (!versions.includes(entry.version)) versions.push(entry.version);
         return versions;
       }, Array<string>());
     },
@@ -73,20 +67,14 @@ export const useRosterStore = defineStore('roster', {
     filter(searchCriteria: SearchRosterEntry, curMonth = true) {
       return (
         (curMonth ? this.monthEntries : this.allEntries).filter((entry) => {
-          if (searchCriteria.version && entry.version != searchCriteria.version)
-            return false;
-          if (searchCriteria.time && entry.time != searchCriteria.time)
-            return false;
-          if (searchCriteria.smo && entry.smo != searchCriteria.smo)
-            return false;
           if (
-            searchCriteria.activity &&
-            entry.activity != searchCriteria.activity
-          )
-            return false;
-          if (
-            searchCriteria.date &&
-            !isSameDay(entry.date, searchCriteria.date)
+            (searchCriteria.version &&
+              entry.version != searchCriteria.version) ||
+            (searchCriteria.time && entry.time != searchCriteria.time) ||
+            (searchCriteria.smo && entry.smo != searchCriteria.smo) ||
+            (searchCriteria.activity &&
+              entry.activity != searchCriteria.activity) ||
+            (searchCriteria.date && !isSameDay(entry.date, searchCriteria.date))
           )
             return false;
           return true;
