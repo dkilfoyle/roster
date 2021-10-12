@@ -23,8 +23,11 @@
       </q-card>
     </q-menu>
     <q-menu style="min-height: 300px" v-model="activityMenu">
-      <div class="text-center q-pa-md bg-info q-mb-sm">{{ smoName }} on {{ dateStr }}</div>
-
+      <div class="row q-pa-md bg-info q-mb-sm">
+        <div class="col">{{ smoName }} on {{ dateStr }}</div>
+        <q-btn class="col-auto" icon="close" size="sm" @click="activityMenu = false"></q-btn>
+      </div>
+      <div class="text-center"></div>
       <q-tabs v-model="cellTab" class="q-mt-md">
         <q-tab name="assigned" label="Cur">
           <q-badge

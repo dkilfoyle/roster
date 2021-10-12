@@ -1,8 +1,10 @@
 <template>
   <td :class="tdClasses">
     <q-menu style="min-height: 300px" v-model="smoPopup">
-      <div class="text-center q-pa-md bg-info q-mb-sm">{{ activityName }} on {{ dateStr }}</div>
-
+      <div class="row q-pa-md bg-info q-mb-sm">
+        <div class="col">{{ activityName }} on {{ dateStr }}</div>
+        <q-btn class="col-auto" icon="close" size="sm" @click="smoPopup = false"></q-btn>
+      </div>
       <q-tabs v-model="cellTab" class="q-mt-md">
         <q-tab name="assigned" label="Cur">
           <q-badge
