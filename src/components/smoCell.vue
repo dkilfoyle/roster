@@ -144,7 +144,7 @@ export default defineComponent({
         date: date.value,
         time: time.value,
         smo: smoName.value,
-      });
+      }).filter(entry => entry.activity != 'Call');
     });
 
     const activityMenu = ref(false);
@@ -195,13 +195,19 @@ export default defineComponent({
       assignedEntries.value.map((entry) => entry.activity)
     );
 
-    const availableActivities = computed(() =>
+    const allowedActivitiesNotAssigned = computed(() =>
       allowedActivities.value.filter(
         (activityName) => !assignedActivities.value.includes(activityName)
       )
+    )
+
+    const availableActivities = computed(() =>
+      allowedActivitiesNotAssigned.value.filter((activityName) => store.isValidActivity(date.value, time.value, activityName).answer)
     );
 
-    const unavailableActivities = computed(() => []);
+    const unavailableActivities = computed(() =>
+      allowedActivitiesNotAssigned.value.filter((activityName) => store.isValidActivity(date.value, time.value, activityName).answer == false)
+    );
 
     const incapableActivities = computed(() =>
       activityStore.activityNames.filter(

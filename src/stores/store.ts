@@ -140,8 +140,21 @@ export const useStore = defineStore('main', {
     doFinaliseVersion() {
       console.log('doFinaliseVersion');
     },
-    doDeleteVersion() {
+    async doDeleteVersion() {
       console.log('doDeleteVersion');
+      const rosterStore = useRosterStore();
+      console.log(rosterStore.monthEntries);
+
+      const ids = rosterStore.monthEntries.map((entry) => entry.id);
+
+      await Promise.all(
+        ids.map(async (id) => {
+          console.log('Deleting ', id);
+          return await rosterStore.delRosterEntry(id);
+        })
+      );
+      const monthStore = useMonthStore();
+      monthStore.version = 'Final';
     },
 
     generateNCT() {
@@ -191,7 +204,7 @@ export const useStore = defineStore('main', {
      */
     isValidActivity(date: Date, time: Time, activityName: string) {
       const result = {
-        answer: true,
+        answer: false,
         reasons: Array<string>(),
       };
 
@@ -239,7 +252,7 @@ export const useStore = defineStore('main', {
         return Array.isArray(x) ? x : [x, x];
       };
 
-      if (activity.perSession) {
+      if (activity && activity.perSession) {
         const minMax = getMinMax(activity.perSession);
         if (foundTimeMatches < minMax[0]) {
           result.reasons.push(
@@ -253,7 +266,7 @@ export const useStore = defineStore('main', {
         }
       }
 
-      if (activity.perDay) {
+      if (activity && activity.perDay) {
         const minMax = getMinMax(activity.perDay);
         if (foundDateMatches < minMax[0]) {
           result.reasons.push(

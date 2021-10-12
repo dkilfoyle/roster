@@ -173,5 +173,21 @@ export const useSMOStore = defineStore('smo', {
       });
       return entries;
     },
+    showAll() {
+      this.viewOptions.showEMG = true;
+      this.viewOptions.showEEG = true;
+      this.viewOptions.showCall = true;
+      this.viewOptions.showWard = true;
+      this.viewOptions.showWDHB = true;
+      this.viewOptions.showCDHB = true;
+    },
+    showNone() {
+      this.viewOptions.showEMG = false;
+      this.viewOptions.showEEG = false;
+      this.viewOptions.showCall = false;
+      this.viewOptions.showWard = false;
+      this.viewOptions.showWDHB = false;
+      this.viewOptions.showCDHB = false;
+    },
   },
 });

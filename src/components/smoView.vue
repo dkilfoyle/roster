@@ -10,11 +10,19 @@
         <tr class="pm-row">
           <th>
             <q-btn icon="filter_alt" size="sm">
-              <q-menu>
+              <q-menu anchor="top right">
                 <div class="row q-pa-md">
                   <div class="column">
-                    <q-btn @click="showAll" size="sm" class="q-mb-md">All</q-btn>
-                    <q-checkbox v-model="smoStore.viewOptions.showCall" label="Call" size="sm" />
+                    <q-btn-group spread>
+                      <q-btn @click="smoStore.showAll()" icon="playlist_add" size="sm"></q-btn>
+                      <q-btn @click="smoStore.showNone()" icon="clear_all" size="sm"></q-btn>
+                    </q-btn-group>
+                    <q-checkbox
+                      v-model="smoStore.viewOptions.showCall"
+                      label="Call"
+                      size="sm"
+                      class="q-pt-md"
+                    />
                     <q-checkbox v-model="smoStore.viewOptions.showWard" label="Wards" size="sm" />
                     <q-checkbox v-model="smoStore.viewOptions.showEMG" label="EMG" size="sm" />
                     <q-checkbox v-model="smoStore.viewOptions.showEEG" label="EEG" size="sm" />
@@ -70,20 +78,12 @@ export default defineComponent({
     const smoStore = useSMOStore();
     const monthStore = useMonthStore();
 
-    const showAll = () => {
-      smoStore.viewOptions.showEMG = true;
-      smoStore.viewOptions.showEEG = true;
-      smoStore.viewOptions.showCall = true;
-      smoStore.viewOptions.showWard = true;
-      smoStore.viewOptions.showWDHB = true;
-      smoStore.viewOptions.showCDHB = true;
-    };
+
 
     return {
       store,
       smoStore,
       monthStore,
-      showAll,
       format,
     };
   },

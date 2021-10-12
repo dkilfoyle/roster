@@ -46,11 +46,18 @@ export const useRosterStore = defineStore('roster', {
         return lookupTable;
       }, <RosterLookup>{});
     },
-    monthVersions(): Array<string> {
-      return this.monthEntries.reduce((versions, entry) => {
-        if (!versions.includes(entry.version)) versions.push(entry.version);
-        return versions;
-      }, Array<string>());
+    monthVersions(state): Array<string> {
+      const monthStore = useMonthStore();
+      return state.allEntries
+        .filter(
+          (entry) =>
+            entry.date >= monthStore.startDate &&
+            entry.date <= monthStore.endDate
+        )
+        .reduce((versions, entry) => {
+          if (!versions.includes(entry.version)) versions.push(entry.version);
+          return versions;
+        }, Array<string>());
     },
   },
   actions: {
@@ -152,11 +159,13 @@ export const useRosterStore = defineStore('roster', {
     },
 
     async addRosterEntry(entry: RosterData) {
-      const docRef = await addDoc(collection(getFirestore(), 'roster'), {
+      const newEntryDocRef = doc(collection(getFirestore(), 'roster'));
+      this.allEntries.push({ ...entry, id: newEntryDocRef.id });
+      await setDoc(newEntryDocRef, {
         ...entry,
+        id: newEntryDocRef.id,
         date: format(entry.date, 'yyyy-MM-dd'),
       });
-      this.allEntries.push({ id: docRef.id, ...entry });
     },
 
     async setRosterEntry(id: string, setEntry: SetRosterEntry) {
@@ -180,8 +189,8 @@ export const useRosterStore = defineStore('roster', {
           `rosterStore.delRosterEntry: id ${id} does not exist in allEntries`
         );
       } else {
-        await deleteDoc(doc(getFirestore(), 'roster', id));
         this.allEntries.splice(foundIndex, 1);
+        await deleteDoc(doc(getFirestore(), 'roster', id));
       }
     },
   },

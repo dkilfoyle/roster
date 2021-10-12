@@ -75,16 +75,17 @@ export const useActivityStore = defineStore('activity', {
       console.log(' - Loaded activities', this.activities.length);
     },
 
-    getActivity(activityName: string): ActivityDefinition {
+    getActivity(activityName: string): ActivityDefinition | undefined {
       const activity = this.activities.find(
         (activity) => activity.name == activityName
       );
-      if (!activity) throw new Error(`Activity ${activityName} is not defined`);
+      // if (!activity) throw new Error(`Activity ${activityName} is not defined`);
       return activity;
     },
 
     isAllowedActivity(date: Date, time: Time, activityName: string): boolean {
       const activity = this.getActivity(activityName);
+      if (!activity) return true;
       if (!activity.allowedDates)
         throw new Error('activities are not compiled');
       return activity.allowedDates[time].some((activityDate) =>
@@ -100,6 +101,28 @@ export const useActivityStore = defineStore('activity', {
           PM: parseRRule(activity.PM, startDate, endDate),
         };
       });
+    },
+
+    showAll(): void {
+      this.viewOptions.showLeave = true;
+      this.viewOptions.showCall = true;
+      this.viewOptions.showInpatient = true;
+      this.viewOptions.showClinic = true;
+      this.viewOptions.showOther = true;
+      this.viewOptions.showProcedure = true;
+      this.viewOptions.showConsults = true;
+      this.viewOptions.showNCT = true;
+    },
+
+    showNone(): void {
+      this.viewOptions.showLeave = false;
+      this.viewOptions.showCall = false;
+      this.viewOptions.showInpatient = false;
+      this.viewOptions.showClinic = false;
+      this.viewOptions.showOther = false;
+      this.viewOptions.showProcedure = false;
+      this.viewOptions.showConsults = false;
+      this.viewOptions.showNCT = false;
     },
   },
 });

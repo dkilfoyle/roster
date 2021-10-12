@@ -11,13 +11,18 @@
         <tr class="pm-row">
           <th>
             <q-btn icon="filter_alt" size="sm">
-              <q-menu>
+              <q-menu anchor="top right">
                 <div class="row q-pa-md">
                   <div class="column">
+                    <q-btn-group spread>
+                      <q-btn @click="activityStore.showAll()" icon="playlist_add" size="sm"></q-btn>
+                      <q-btn @click="activityStore.showNone()" icon="clear_all" size="sm"></q-btn>
+                    </q-btn-group>
                     <q-checkbox
                       v-model="activityStore.viewOptions.showLeave"
                       label="Leave"
                       size="sm"
+                      class="q-pt-md"
                     />
                     <q-checkbox
                       v-model="activityStore.viewOptions.showCall"
