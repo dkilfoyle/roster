@@ -108,6 +108,14 @@ export default defineComponent({
       })
     );
 
+    const sortName = (a: string, b: string) => {
+      const aname = a.substr(-1) + a.substr(0, a.length - 1);
+      const bname = b.substr(-1) + b.substr(0, a.length - 1);
+      if (aname < bname) return -1;
+      if (aname > bname) return 1;
+      return 0;
+    }
+
     const assignedSMOs = computed(() =>
       assignedEntries.value.map((entry) => entry.smo)
     );
@@ -136,7 +144,8 @@ export default defineComponent({
           )
         )
         .map((smo) => smo.name)
-        .filter((smo) => !assignedSMOs.value.includes(smo));
+        .filter((smo) => !assignedSMOs.value.includes(smo))
+        .sort(sortName)
     });
 
     const unavailableSMOs = computed(() => {
@@ -149,7 +158,8 @@ export default defineComponent({
             activityName.value
           )
         )
-        .map((smo) => smo.name);
+        .map((smo) => smo.name)
+        .sort(sortName);
     });
 
     const incapableSMOs = computed(() => {
@@ -157,7 +167,8 @@ export default defineComponent({
         .filter(
           (smo) => !smoStore.isAllowedActivitySMO(activityName.value, smo.name)
         )
-        .map((smo) => smo.name);
+        .map((smo) => smo.name)
+        .sort(sortName)
     });
 
     const removeSMO = (entryNum: number) => {
