@@ -2,9 +2,11 @@
   <div class="column q-pb-lg q-pr-lg q-gutter-y-md">
     <div class="col text-center">
       Start Date:
-      <span style="font-weight: bold">{{
-        format(monthStore.startDate, 'yyyy-MM-dd')
-      }}</span>
+      <span style="font-weight: bold">
+        {{
+          format(monthStore.startDate, 'yyyy-MM-dd')
+        }}
+      </span>
     </div>
     <div class="row q-gutter-x-md">
       <q-select
@@ -49,26 +51,26 @@
       label="Version"
       dense
       filled
-      ><template v-slot:after>
-        <q-btn round size="sm" dense icon="more_horiz">
+    >
+      <template v-slot:after>
+        <q-btn round size="sm" dense icon="more_horiz" :disable="monthStore.isArchived">
           <q-menu>
             <q-list style="padding-bottom: 0px">
-              <q-item clickable v-close-popup @click="newVersion = true"
-                ><q-item-section>Add new</q-item-section></q-item
-              >
+              <q-item clickable v-close-popup @click="newVersion = true">
+                <q-item-section>Add new</q-item-section>
+              </q-item>
               <q-item
                 v-if="monthStore.version != 'Final'"
                 clickable
                 v-close-popup
                 @click="finaliseVersion = true"
-                ><q-item-section>Finalise</q-item-section></q-item
               >
-              <div v-if="!monthStore.isArchived">
-                <q-separator></q-separator>
-                <q-item clickable v-close-popup @click="deleteVersion = true"
-                  ><q-item-section>Delete</q-item-section></q-item
-                >
-              </div>
+                <q-item-section>Finalise</q-item-section>
+              </q-item>
+              <q-separator></q-separator>
+              <q-item clickable v-close-popup @click="deleteVersion = true">
+                <q-item-section>Delete</q-item-section>
+              </q-item>
             </q-list>
           </q-menu>
         </q-btn>
@@ -76,22 +78,20 @@
     </q-select>
     <q-dialog v-model="newVersion">
       <q-card>
-        <q-card-section class="text-subtitle1"
-          >Create a new version of {{ monthStore.monthName }}</q-card-section
-        >
-        <q-card-section class="q-pt-none"
-          ><q-input v-model="newVersionName" label="Name" autofocus></q-input
-        ></q-card-section>
-        <q-card-actions align="right"
-          ><q-btn flat label="Cancel" color="primary" v-close-popup></q-btn
-          ><q-btn
+        <q-card-section class="text-subtitle1">Create a new version of {{ monthStore.monthName }}</q-card-section>
+        <q-card-section class="q-pt-none">
+          <q-input v-model="newVersionName" label="Name" autofocus></q-input>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" color="primary" v-close-popup></q-btn>
+          <q-btn
             flat
             label="Create"
             color="primary"
             v-close-popup
             @click="store.doCreateVersion(newVersionName)"
-          ></q-btn
-        ></q-card-actions>
+          ></q-btn>
+        </q-card-actions>
       </q-card>
     </q-dialog>
     <q-dialog v-model="finaliseVersion">
@@ -108,13 +108,8 @@
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn
-            flat
-            label="OK"
-            color="primary"
-            v-close-popup
-            @click="store.doFinaliseVersion()"
-          />
+          <q-btn flat label="Cancel" color="primary" v-close-popup />
+          <q-btn flat label="OK" color="primary" v-close-popup @click="store.doFinaliseVersion()" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -131,13 +126,7 @@
 
         <q-card-actions align="right">
           <q-btn flat label="Cancel" color="primary" v-close-popup />
-          <q-btn
-            flat
-            label="OK"
-            color="primary"
-            v-close-popup
-            @click="store.doDeleteVersion()"
-          />
+          <q-btn flat label="OK" color="primary" v-close-popup @click="store.doDeleteVersion()" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -146,27 +135,20 @@
       :disable="monthStore.isArchived"
       class="col"
       @click="confirmNCT = true"
-      >Load NCT</q-btn
-    >
+    >Load NCT</q-btn>
     <q-dialog v-model="confirmNCT" persistent>
       <q-card>
         <q-card-section>
           <div class="text-h6">Warning</div>
         </q-card-section>
 
-        <q-card-section class="q-pt-none">
-          Generating NCT will overwrite any exists entries in the current month
-        </q-card-section>
+        <q-card-section
+          class="q-pt-none"
+        >Generating NCT will overwrite any exists entries in the current month</q-card-section>
 
         <q-card-actions align="right">
           <q-btn flat label="Cancel" color="primary" v-close-popup />
-          <q-btn
-            flat
-            label="Confirm"
-            color="primary"
-            @click="store.generateNCT"
-            v-close-popup
-          />
+          <q-btn flat label="Confirm" color="primary" @click="store.generateNCT" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>

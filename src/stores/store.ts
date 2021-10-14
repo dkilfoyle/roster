@@ -137,22 +137,40 @@ export const useStore = defineStore('main', {
       console.log('Done');
       monthStore.version = newVersionName;
     },
-    doFinaliseVersion() {
+    async doFinaliseVersion() {
       console.log('doFinaliseVersion');
+      const rosterStore = useRosterStore();
+      const monthStore = useMonthStore();
+
+      // delete current month Final
+      const delids = rosterStore.allEntries
+        .filter(
+          (entry) =>
+            entry.date >= monthStore.startDate &&
+            entry.date <= monthStore.endDate &&
+            entry.version == 'Final'
+        )
+        .map((entry) => entry.id);
+
+      await rosterStore.delRosterEntries(delids);
+
+      // change monthEntries.verion to final
+      const changeids = rosterStore.monthEntries.map((entry) => entry.id);
+      await Promise.all(
+        changeids.map(async (id) => {
+          return await rosterStore.setRosterEntry(id, { version: 'Final' });
+        })
+      );
+
+      monthStore.version = 'Final';
     },
     async doDeleteVersion() {
       console.log('doDeleteVersion');
       const rosterStore = useRosterStore();
-      console.log(rosterStore.monthEntries);
 
       const ids = rosterStore.monthEntries.map((entry) => entry.id);
+      await rosterStore.delRosterEntries(ids);
 
-      await Promise.all(
-        ids.map(async (id) => {
-          console.log('Deleting ', id);
-          return await rosterStore.delRosterEntry(id);
-        })
-      );
       const monthStore = useMonthStore();
       monthStore.version = 'Final';
     },

@@ -16,7 +16,6 @@ import {
   setDoc,
   getDocs,
   deleteDoc,
-  addDoc,
 } from 'firebase/firestore';
 
 import { format } from 'date-fns';
@@ -174,7 +173,6 @@ export const useRosterStore = defineStore('roster', {
         if (setEntry.activity) found.activity = setEntry.activity;
         if (setEntry.notes) found.notes = setEntry.notes;
         if (setEntry.version) found.version = setEntry.version;
-        debugger;
         const entryRef = doc(getFirestore(), 'roster', found.id);
         await setDoc(entryRef, setEntry, { merge: true });
       } else {
@@ -192,6 +190,20 @@ export const useRosterStore = defineStore('roster', {
         this.allEntries.splice(foundIndex, 1);
         await deleteDoc(doc(getFirestore(), 'roster', id));
       }
+    },
+
+    async delRosterEntries(ids: Array<string>) {
+      this.$patch((state) => {
+        state.allEntries = state.allEntries.filter(
+          (entry) => !ids.includes(entry.id)
+        );
+      });
+
+      await Promise.all(
+        ids.map(async (id) => {
+          return await deleteDoc(doc(getFirestore(), 'roster', id));
+        })
+      );
     },
   },
 });

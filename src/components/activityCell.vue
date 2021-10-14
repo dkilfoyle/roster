@@ -1,6 +1,6 @@
 <template>
   <td :class="tdClasses">
-    <q-menu style="min-height: 300px" v-model="smoPopup">
+    <q-menu style="min-height: 300px" v-model="smoPopup" v-if="!monthStore.isArchived">
       <div class="row q-pa-md bg-info q-mb-sm">
         <div class="col">{{ activityName }} on {{ dateStr }}</div>
         <q-btn class="col-auto" icon="close" size="sm" @click="smoPopup = false"></q-btn>
@@ -92,6 +92,7 @@ export default defineComponent({
     const store = useStore();
     const smoStore = useSMOStore();
     const rosterStore = useRosterStore();
+    const monthStore = useMonthStore();
     const activityStore = useActivityStore();
 
     const { dateStr, time, activityName } = toRefs(props);
@@ -234,6 +235,7 @@ export default defineComponent({
       tdClasses,
       addSMO,
       removeSMO,
+      monthStore
     };
   },
 });

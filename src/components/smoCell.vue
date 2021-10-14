@@ -1,6 +1,6 @@
 <template>
   <td :class="tdClasses">
-    <q-menu context-menu>
+    <q-menu context-menu v-if="!monthStore.isArchived">
       <q-card style="min-width: 350px">
         <q-card-section>
           <div class="text-h8">Notes for {{ smoName }} on {{ dateStr }}</div>
@@ -18,11 +18,11 @@
 
         <q-card-actions align="right" class="text-primary">
           <q-btn flat label="Cancel" v-close-popup />
-          <q-btn flat label="Save Note" @click="saveNotes" v-close-popup />
+          <q-btn flat label="Save" @click="saveNotes" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-menu>
-    <q-menu style="min-height: 300px" v-model="activityMenu">
+    <q-menu style="min-height: 300px" v-model="activityMenu" v-if="!monthStore.isArchived">
       <div class="row q-pa-md bg-info q-mb-sm">
         <div class="col">{{ smoName }} on {{ dateStr }}</div>
         <q-btn class="col-auto" icon="close" size="sm" @click="activityMenu = false"></q-btn>
@@ -141,6 +141,7 @@ export default defineComponent({
     const smoStore = useSMOStore();
     const activityStore = useActivityStore();
     const rosterStore = useRosterStore();
+    const monthStore = useMonthStore();
 
     const assignedEntries = computed(() => {
       return rosterStore.filter({
@@ -312,6 +313,7 @@ export default defineComponent({
       tdContent,
       tdClasses,
       date,
+      monthStore
     };
   },
 });
