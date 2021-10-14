@@ -13,6 +13,8 @@ import {
   // DocumentData,
   getDocs,
 } from 'firebase/firestore';
+import { useMonthStore } from './monthStore';
+import { useActivityStore } from './activityStore';
 
 // Export as JSON
 // console.log(
@@ -36,27 +38,65 @@ export const useSMOStore = defineStore('smo', {
       showWard: true,
       showWDHB: true,
       showCDHB: true,
+      showBTX: true,
+      showOther: true,
     },
   }),
   getters: {
     visibleSMOs(state): Array<string> {
       const res: Array<string> = [];
-      if (state.viewOptions.showCDHB) res.push('MMH');
+      if (state.viewOptions.showCDHB) res.push(...['MMH', 'MSC']);
       if (state.viewOptions.showWDHB) res.push(...['NSH', 'WTH']);
       if (state.viewOptions.showWard) res.push(...['Neuro', 'Stroke']);
       if (state.viewOptions.showEMG) res.push('EMG');
       if (state.viewOptions.showEEG) res.push('EEG');
+      if (state.viewOptions.showBTX) res.push('BTX');
       if (state.viewOptions.showCall) res.push('Call');
+      const activityStore = useActivityStore();
+      if (state.viewOptions.showOther)
+        res.push(
+          ...activityStore.activities
+            .filter(
+              (activity) =>
+                ![
+                  'MMH',
+                  'MSC',
+                  'NSH',
+                  'WTH',
+                  'Neuro',
+                  'Stroke',
+                  'EMG',
+                  'EEG',
+                  'BTX',
+                  'Call',
+                ].includes(activity.name)
+            )
+            .map((activity) => activity.name)
+        );
       return res;
     },
 
     filteredSMOs(state): Array<SMODefinition> {
-      return state.smos.filter((smo) =>
-        smo.activities.some((activity) => {
-          if (this.visibleSMOs.includes(activity)) return true;
-          else return false;
+      const monthStore = useMonthStore();
+      return state.smos
+        .filter((smo) => {
+          if (smo.endDate && smo.endDate < monthStore.startDate) return false;
+          return smo.activities.some((activity) => {
+            if (this.visibleSMOs.includes(activity)) return true;
+            else return false;
+          });
         })
-      );
+        .sort((a, b) => {
+          if (a.group == b.group) {
+            const aname =
+              a.name.substr(-1) + a.name.substr(0, a.name.length - 1);
+            const bname =
+              b.name.substr(-1) + b.name.substr(0, b.name.length - 1);
+            if (aname < bname) return -1;
+            if (aname > bname) return 1;
+            return 0;
+          } else return a.group - b.group;
+        });
     },
     filteredSMOs2(): Array<SMODefinition> {
       return this.filteredSMOs.reduce(
@@ -176,18 +216,22 @@ export const useSMOStore = defineStore('smo', {
     showAll() {
       this.viewOptions.showEMG = true;
       this.viewOptions.showEEG = true;
+      this.viewOptions.showBTX = true;
       this.viewOptions.showCall = true;
       this.viewOptions.showWard = true;
       this.viewOptions.showWDHB = true;
       this.viewOptions.showCDHB = true;
+      this.viewOptions.showOther = true;
     },
     showNone() {
       this.viewOptions.showEMG = false;
       this.viewOptions.showEEG = false;
+      this.viewOptions.showBTX = false;
       this.viewOptions.showCall = false;
       this.viewOptions.showWard = false;
       this.viewOptions.showWDHB = false;
       this.viewOptions.showCDHB = false;
+      this.viewOptions.showOther = false;
     },
   },
 });

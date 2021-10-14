@@ -191,7 +191,7 @@ export default defineComponent({
 
     const isHoliday = computed(() => store.isHoliday(date.value));
 
-    const allowedActivities = computed(
+    const capableActivities = computed(
       () => smoStore.getSMO(smoName.value).activities
     );
 
@@ -199,23 +199,23 @@ export default defineComponent({
       assignedEntries.value.map((entry) => entry.activity)
     );
 
-    const allowedActivitiesNotAssigned = computed(() =>
-      allowedActivities.value.filter(
+    const capableActivitiesNotAssigned = computed(() =>
+      capableActivities.value.filter(
         (activityName) => !assignedActivities.value.includes(activityName)
       )
     )
 
     const availableActivities = computed(() =>
-      allowedActivitiesNotAssigned.value.filter((activityName) => store.isValidActivity(date.value, time.value, activityName).answer)
+      capableActivitiesNotAssigned.value.filter((activityName) => activityStore.isAllowedActivity(date.value, time.value, activityName))
     );
 
     const unavailableActivities = computed(() =>
-      allowedActivitiesNotAssigned.value.filter((activityName) => store.isValidActivity(date.value, time.value, activityName).answer == false)
+      capableActivitiesNotAssigned.value.filter((activityName) => !activityStore.isAllowedActivity(date.value, time.value, activityName))
     );
 
     const incapableActivities = computed(() =>
       activityStore.activityNames.filter(
-        (activityName) => !allowedActivities.value.includes(activityName)
+        (activityName) => !capableActivities.value.includes(activityName)
       )
     );
 
@@ -308,12 +308,12 @@ export default defineComponent({
       incapableActivities,
       isValidSMO,
       assignedActivities,
-      allowedActivities,
+      capableActivities,
       tdHasTooltip,
       tdContent,
       tdClasses,
       date,
-      monthStore
+      monthStore,
     };
   },
 });

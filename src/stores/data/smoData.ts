@@ -10,6 +10,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'DK',
     fullName: 'Dean Kilfoyle',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'EMG', 'WDHB'],
     NCT: [
@@ -28,6 +29,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'NA',
     fullName: 'Neil Anderson',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'MSC', 'MMH'],
     NCT: [
@@ -41,6 +43,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'AB',
     fullName: 'Alan Barber',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'UNI', 'NSH', 'WRE', 'MS'],
     NCT: [
@@ -54,6 +57,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'PB',
     fullName: 'Peter Bergin',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'NSH', 'Epi', 'EEG'],
     NCT: [
@@ -67,6 +71,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'AC',
     fullName: 'Alison Charleston',
+    group: 2,
     endDate: null,
     activities: ['OPC'],
     NCT: [
@@ -80,6 +85,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'RF',
     fullName: 'Richard Frith',
+    group: 1,
     endDate: null,
     activities: [...full, 'BTX', 'EEG', 'EMG', 'WRE', 'A+T'],
     NCT: [
@@ -93,6 +99,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'RH',
     fullName: 'Rosamund Hill',
+    group: 1,
     endDate: null,
     activities: [...clinics, 'EEG'],
     NCT: [
@@ -106,6 +113,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'DH',
     fullName: 'David Hutchinson',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'NSH', 'WTH', 'MMH', 'WRE', 'MMH'],
     NCT: [
@@ -119,6 +127,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'JP',
     fullName: 'Jennifer Pereira',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'MS'],
     NCT: [
@@ -132,6 +141,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'RR',
     fullName: 'Richard Roxburgh',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'WRE', 'MMH', 'UNI', 'EFR'],
     NCT: [
@@ -145,6 +155,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'MS',
     fullName: 'Mark Simpson',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'TBH', 'MMH', 'MSC', 'BTX', 'DBS', 'MD cl'],
     NCT: [
@@ -158,6 +169,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'BS',
     fullName: 'Barry Simpson',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'TBH', 'BTX'],
     NCT: [
@@ -176,6 +188,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'ElW',
     fullName: 'Elizabeth Walker',
+    group: 1,
     endDate: null,
     activities: [...full, 'EEG', 'EMG', 'BTX'],
     NCT: [
@@ -189,6 +202,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'EdW',
     fullName: 'Edward Wong',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'CDHB', 'MMH', 'MSC', 'BTX'],
     NCT: [
@@ -207,6 +221,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'NC',
     fullName: 'Nicholas Child',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'EEG', 'WDHB'],
     NCT: [
@@ -220,6 +235,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'JB',
     fullName: 'Julian Bauer',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'NSH', 'WTH', 'EMG', 'MND'],
     NCT: [
@@ -233,6 +249,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'JK',
     fullName: 'Justin Kao',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'NSH', 'WTH', 'EMG', 'WRE', 'MS'],
     NCT: [],
@@ -240,6 +257,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'PyB',
     fullName: 'Pyari Bose',
+    group: 1,
     endDate: null,
     activities: [...full, 'MMH', 'MSC'],
     NCT: [
@@ -253,6 +271,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'VD',
     fullName: 'Viswas Dayal',
+    group: 1,
     endDate: null,
     activities: [...full, ...call, 'MMH', 'MSC', 'DBS', 'MD cl'],
     NCT: [],
@@ -260,6 +279,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'SS',
     fullName: 'Sunayana Sasikumar',
+    group: 1,
     endDate: null,
     activities: [...full, 'FSC'],
     NCT: [{ name: 'NCT', AM: 'every Thursday', PM: 'every Monday' }],
@@ -267,6 +287,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'DM',
     fullName: 'David McAuley',
+    group: 2,
     endDate: null,
     activities: ['DSC', 'OPC'],
     NCT: [
@@ -280,6 +301,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'PN',
     fullName: 'Petina Newton',
+    group: 3,
     endDate: null,
     activities: ['DSC'],
     NCT: [
@@ -293,6 +315,7 @@ export const smoData: Array<SMODefinition> = [
   {
     name: 'SD',
     fullName: 'Sue Davis',
+    group: 2,
     endDate: null,
     activities: ['EEG'],
     NCT: [

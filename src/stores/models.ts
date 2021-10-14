@@ -86,4 +86,5 @@ export interface SMODefinition {
     AM: Array<Date>;
     PM: Array<Date>;
   };
+  group: number;
 }

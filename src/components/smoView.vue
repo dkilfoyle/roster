@@ -9,29 +9,31 @@
         </tr>
         <tr class="pm-row">
           <th>
-            <q-btn icon="filter_alt" size="sm">
-              <q-menu anchor="top right">
-                <div class="row q-pa-md">
-                  <div class="column">
-                    <q-btn-group spread>
-                      <q-btn @click="smoStore.showAll()" icon="playlist_add" size="sm"></q-btn>
-                      <q-btn @click="smoStore.showNone()" icon="clear_all" size="sm"></q-btn>
-                    </q-btn-group>
-                    <q-checkbox
-                      v-model="smoStore.viewOptions.showCall"
-                      label="Call"
-                      size="sm"
-                      class="q-pt-md"
-                    />
-                    <q-checkbox v-model="smoStore.viewOptions.showWard" label="Wards" size="sm" />
-                    <q-checkbox v-model="smoStore.viewOptions.showEMG" label="EMG" size="sm" />
-                    <q-checkbox v-model="smoStore.viewOptions.showEEG" label="EEG" size="sm" />
-                    <q-checkbox v-model="smoStore.viewOptions.showWDHB" label="WDHB" size="sm" />
-                    <q-checkbox v-model="smoStore.viewOptions.showCDHB" label="CMDHB" size="sm" />
-                  </div>
+            <q-btn icon="filter_alt" size="sm"></q-btn>
+            <q-menu anchor="top right" v-model="showSMOFilterMenu">
+              <div class="row q-pa-md">
+                <div class="column">
+                  <q-btn-group spread>
+                    <q-btn @click="smoStore.showAll()" icon="playlist_add" size="sm"></q-btn>
+                    <q-btn @click="smoStore.showNone()" icon="clear_all" size="sm"></q-btn>
+                    <q-btn @click="showSMOFilterMenu = false" icon="close" size="sm"></q-btn>
+                  </q-btn-group>
+                  <q-checkbox
+                    v-model="smoStore.viewOptions.showCall"
+                    label="Call"
+                    size="sm"
+                    class="q-pt-md"
+                  />
+                  <q-checkbox v-model="smoStore.viewOptions.showWard" label="Wards" size="sm" />
+                  <q-checkbox v-model="smoStore.viewOptions.showEMG" label="EMG" size="sm" />
+                  <q-checkbox v-model="smoStore.viewOptions.showEEG" label="EEG" size="sm" />
+                  <q-checkbox v-model="smoStore.viewOptions.showBTX" label="BTX" size="sm" />
+                  <q-checkbox v-model="smoStore.viewOptions.showWDHB" label="WDHB" size="sm" />
+                  <q-checkbox v-model="smoStore.viewOptions.showCDHB" label="CMDHB" size="sm" />
+                  <q-checkbox v-model="smoStore.viewOptions.showOther" label="Other" size="sm" />
                 </div>
-              </q-menu>
-            </q-btn>
+              </div>
+            </q-menu>
           </th>
           <th></th>
           <th
@@ -62,7 +64,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, ref } from 'vue';
 import { useStore } from '../stores/store';
 import { useSMOStore } from 'src/stores/smoStore';
 import { useMonthStore } from 'src/stores/monthStore';
@@ -78,6 +80,7 @@ export default defineComponent({
     const smoStore = useSMOStore();
     const monthStore = useMonthStore();
 
+    const showSMOFilterMenu = ref(false);
 
 
     return {
@@ -85,6 +88,7 @@ export default defineComponent({
       smoStore,
       monthStore,
       format,
+      showSMOFilterMenu
     };
   },
 });
