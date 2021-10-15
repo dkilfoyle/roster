@@ -204,20 +204,73 @@ export default defineComponent({
     const exportXLS = () => {
       const workbook = new excelJS.Workbook();
       workbook.modified = new Date();
-
       const sheet = workbook.addWorksheet(monthStore.monthName + (monthStore.version != 'Final' ? '_' + monthStore.version : ''));
 
       const solidFill = (color: string): excelJS.Fill => ({ type: 'pattern', pattern: 'solid' as excelJS.FillPatterns, fgColor: { argb: color } });
+      const weekColor = ['FFCCFFCC', '00FFFFFF'];
+      let weekColorSelector = true;
 
-      sheet.getCell(1, 1).value = 'Neurology Consultants Roster'
-      sheet.getCell(1, 1).font = { color: { argb: 'FFFF0000' }, bold: true, size: 18 };
+      const colorWhite = 'FFFFFFFF';
+      const colorBlue = 'FF3366FF';
+      const colorRed = 'FFFF0000';
+      const colorYellow = 'FFFFFF99';
+      const colorOrange = 'FFFF6600';
+      const colorGreen = 'FF006600';
+      const colorLightGreen = 'FF92D050'
+      const colorLightBlue = 'FF92CDDC';
+      const colorPink = 'FFFF3399';
+      const colorBlack = 'FF000000'
 
-      sheet.getRow(2).values = ['', ''].concat(monthStore.dates.map((date) => format(date, 'ccccc')));
-      sheet.getRow(2).font = { color: { argb: 'FF0000FF' } };
+      const activityFillColor = {
+        TBH: colorGreen,
+        ANL: colorOrange,
+        CME: colorOrange,
+        MS: colorPink,
+        CRS_GP: colorBlack,
+        CRS_ACT: colorLightGreen,
+        BTX: colorRed,
+        TNP: colorLightBlue,
+        RT: colorLightBlue,
+        WRE: colorBlue,
+        TIL: colorOrange,
+        'A+T': colorPink
+      } as Record<string, string>;
 
-      sheet.getRow(3).values = [monthStore.monthName, ''].concat(monthStore.dates.map((date) => format(date, 'dd')));
-      sheet.getRow(3).font = { color: { argb: 'FFFFFFFF' } }
-      sheet.getRow(3).fill = solidFill('FF0000FF');
+      // Title
+      const titleCell = sheet.getCell(1, 1)
+      titleCell.value = 'Neurology Consultants Roster'
+      titleCell.font = { color: { argb: colorRed }, bold: true, size: 18 };
+
+      // Month title
+      const monthCell = sheet.getCell(3, 1);
+      monthCell.value = monthStore.monthName;
+      monthCell.font = { color: { argb: colorWhite }, size: 15, bold: true }
+      monthCell.fill = solidFill(colorBlue);
+      monthCell.border = { bottom: { style: 'medium' } }
+
+      // Cell above Time column
+      sheet.getCell(3, 2).border = { bottom: { style: 'medium' } }
+
+      // days and date headers
+      monthStore.dates.forEach((date, i) => {
+
+        const dayCell = sheet.getCell(2, 3 + i)
+        dayCell.value = format(date, 'ccc');
+        dayCell.font = { color: { argb: colorBlue }, bold: true };
+        dayCell.alignment = { horizontal: 'center' }
+
+        const dateCell = sheet.getCell(3, 3 + i);
+        dateCell.alignment = { horizontal: 'center' };
+        dateCell.value = format(date, 'd');
+        dateCell.font = { color: { argb: colorWhite }, bold: true, size: 14 };
+        dateCell.fill = solidFill(colorBlue);
+        dateCell.border = { left: { style: 'medium', color: { argb: colorWhite } }, bottom: { style: 'medium' } }
+
+        if (isMonday(date)) {
+          dayCell.border = { ...dayCell.border, left: { style: 'medium' } }
+          dateCell.border = { ...dateCell.border, left: { style: 'medium' } }
+        }
+      })
 
       smoStore.filteredSMOs2.forEach((smo, i) => {
 
@@ -225,21 +278,24 @@ export default defineComponent({
           // Empty cell below SMO name
           sheet.getCell(4 + i, 1).border = { bottom: { style: 'medium' } };
           // PM
-          sheet.getCell(4 + i, 2).value = 'PM';
-          sheet.getCell(4 + i, 2).border = { bottom: { style: 'medium' } };
-          sheet.getCell(4 + i, 2).fill = solidFill('FF0000FF');
-          sheet.getCell(4 + i, 2).font = { color: { argb: 'FFFFFFFF' } };
+          const pmCell = sheet.getCell(4 + i, 2)
+          pmCell.value = 'PM';
+          pmCell.border = { bottom: { style: 'medium' }, left: { style: 'medium' } };
+          pmCell.fill = solidFill(colorBlue);
+          pmCell.font = { color: { argb: colorWhite }, name: 'arial', size: 10 };
         } else {
           // smo name
-          sheet.getCell(4 + i, 1).value = smo.fullName;
-          sheet.getCell(4 + i, 1).font = { color: { argb: 'FF0000FF' } };
+          const smoCell = sheet.getCell(4 + i, 1);
+          smoCell.value = smo.fullName;
+          smoCell.font = { color: { argb: colorBlue }, name: 'arial', size: 10 };
           // AM
-          sheet.getCell(4 + i, 2).value = 'AM';
-          sheet.getCell(4 + i, 2).font = { color: { argb: 'FF0000FF' } };
+          const amCell = sheet.getCell(4 + i, 2);
+          amCell.value = 'AM';
+          amCell.font = { color: { argb: colorBlue }, name: 'arial', size: 10 };
+          amCell.border = { left: { style: 'medium' } };
         }
 
-        const weekColor = ['FFCCFFCC', '00FFFFFF'];
-        let weekColorSelector = true;
+
 
         monthStore.dates.forEach((date, j) => {
           const cell = sheet.getCell(4 + i, 3 + j);
@@ -248,7 +304,8 @@ export default defineComponent({
           cell.fill = solidFill(weekColor[weekColorSelector ? 1 : 0])
 
           if (store.isHoliday(date)) {
-            cell.fill = solidFill('FFFFFF00');
+            cell.fill = solidFill(colorYellow);
+            cell.border = { right: { style: 'medium' }, left: { style: 'medium' } }
             return;
           }
 
@@ -258,10 +315,24 @@ export default defineComponent({
             smo: smo.name
           });
 
-          cell.value = assignedEntries.length ? assignedEntries[0].activity : '';
-          cell.font = { color: { argb: 'FFFF0000' }, size: 8, name: 'arial' };
+
+          cell.font = { color: { argb: colorRed }, size: 8, name: 'arial' };
           cell.alignment = { horizontal: 'center' };
           cell.border = { bottom: { style: i % 2 ? 'medium' : 'thin' }, left: { style: 'thin' } }
+
+          if (assignedEntries.length && assignedEntries[0].activity) {
+            const activity = assignedEntries[0].activity;
+            if (activity == 'CRS_GP')
+              cell.value = 'CRS'
+            else if (activity == 'CRS_ACT')
+              cell.value = 'CRS'
+            else cell.value = activity;
+
+            if (activityFillColor[activity]) {
+              cell.fill = solidFill(activityFillColor[assignedEntries[0].activity]);
+              cell.font.color = { argb: colorWhite }
+            }
+          }
 
           if (isMonday(date)) {
             cell.border = { ...cell.border, left: { style: 'medium' } }
@@ -272,6 +343,7 @@ export default defineComponent({
 
       sheet.getColumn(1).width = 18;
       sheet.getColumn(2).width = 4;
+      monthStore.dates.forEach((date, i) => { sheet.getColumn(3 + i).width = 6 });
 
       const createOuterBorder = (worksheet: excelJS.Worksheet, start = { row: 1, col: 1 }, end = { row: 1, col: 1 }, borderWidth: excelJS.BorderStyle = 'medium') => {
         const borderStyle = {
