@@ -52,7 +52,7 @@
     <q-tooltip v-if="tdHasTooltip">
       <div class="tdtooltip">
         <div class="col">{{ assignedSMOs.map((smo) => smo).join(', ') }}</div>
-        <div class="col" v-for="(reason, i) in isValidActivity.reasons" :key="i">{{ reason }}</div>
+        <div class="col" v-for="(reason, i) in errors" :key="i">{{ reason }}</div>
       </div>
     </q-tooltip>
     {{ tdContent }}
@@ -120,9 +120,29 @@ export default defineComponent({
       assignedEntries.value.map((entry) => entry.smo)
     );
 
+    const isValidSMOs = computed(() => {
+      const reasons = Array<string>();
+      assignedSMOs.value.forEach((smoName) => {
+        const isvalid = store.isValidSMO(date.value, time.value, smoName);
+        if (isvalid.reasons.length) reasons.push(...isvalid.reasons)
+      })
+      return reasons;
+    })
+
+    const isValidEntries = computed(() => {
+      const reasons = Array<string>();
+      assignedSMOs.value.forEach((smoName) => {
+        const isvalid = store.isValidEntry(date.value, time.value, smoName, activityName.value);
+        if (isvalid.reasons.length) reasons.push(...isvalid.reasons)
+      })
+      return reasons;
+    })
+
     const isValidActivity = computed(() =>
       store.isValidActivity(date.value, time.value, activityName.value)
     );
+
+    const errors = computed(() => isValidActivity.value.reasons.concat(activityName.value == 'Call' ? isValidEntries.value : isValidSMOs.value));
 
     const isAllowedActivity = computed(() =>
       activityStore.isAllowedActivity(
@@ -200,7 +220,7 @@ export default defineComponent({
 
     const tdHasTooltip = computed(() => {
       return (
-        isValidActivity.value.reasons.length || assignedSMOs.value.length > 1
+        errors.value.length > 0 || assignedSMOs.value.length > 1
       );
     });
 
@@ -218,16 +238,20 @@ export default defineComponent({
         return classes;
       const invalidReason = (myreason: string) =>
         !isHoliday.value &&
-        !isValidActivity.value.answer &&
-        isValidActivity.value.reasons.some((reason) =>
+        errors.value.length &&
+        errors.value.some((reason) =>
           reason.includes(myreason)
         );
 
       return classes.concat([
         {
-          invalid1: invalidReason('PerSession'),
-          invalid2: invalidReason('PerDay'),
-          invalid3: invalidReason('Did not expect'),
+          invalidActivity1: invalidReason('PerSession'),
+          invalidActivity2: invalidReason('PerDay'),
+          invalidActivity3: invalidReason('Did not expect'),
+          invalidSMO1: invalidReason('should be followed by RT'),
+          invalidSMO2: invalidReason('is not an allowed activity'),
+          invalidSMO3: invalidReason('is not contracted'),
+          invalidSMO4: invalidReason('is already assigned'),
         },
       ]);
     });
@@ -246,20 +270,33 @@ export default defineComponent({
       tdClasses,
       addSMO,
       removeSMO,
-      monthStore
+      monthStore,
+      errors
     };
   },
 });
 </script>
 
 <style lang="scss" scoped>
-td.invalid1 {
+td.invalidActivity1 {
   background: $deep-orange-3 !important;
 }
-td.invalid2 {
+td.invalidActivity2 {
   background: $orange-3 !important;
 }
-td.invalid3 {
+td.invalidActivity3 {
   background: $yellow-3 !important;
+}
+td.invalidSMO1 {
+  background: $red-2 !important;
+}
+td.invalidSMO2 {
+  background: $pink-2 !important;
+}
+td.invalidSMO3 {
+  background: $purple-2 !important;
+}
+td.invalidSMO4 {
+  background: $deep-purple-2 !important;
 }
 </style>

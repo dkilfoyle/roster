@@ -38,6 +38,7 @@ export interface ActivityDefinition {
   perDay?: [number, number] | number;
   perSession?: [number, number] | number;
   perWeek?: number;
+  perMonth?: number;
 }
 
 export interface SMOActivitySummary {

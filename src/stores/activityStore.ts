@@ -30,6 +30,17 @@ export const useActivityStore = defineStore('activity', {
       showConsults: true,
       showNCT: true,
     },
+    activityRank: {
+      Leave: 1,
+      Inpatient: 2,
+      Consults: 3,
+      Clinic: 4,
+      Procedure: 5,
+      NCT: 6,
+      Outreach: 7,
+      Other: 8,
+      Call: 9,
+    },
   }),
   getters: {
     activityNames(state): Array<string> {
@@ -45,21 +56,35 @@ export const useActivityStore = defineStore('activity', {
       if (state.viewOptions.showClinic) res.push('Clinic');
       if (state.viewOptions.showProcedure) res.push('Procedure');
       if (state.viewOptions.showNCT) res.push('NCT');
-      if (state.viewOptions.showOther) res.push('Other');
+      if (state.viewOptions.showOther) {
+        res.push('Other');
+        res.push('Outreach');
+      }
       return res;
     },
 
     filteredActivities(state): Array<ActivityDefinition> {
-      return state.activities.filter(
-        (activity) => {
-          if (activity.type) {
-            if (this.visibleActivities.includes(activity.type)) return true;
-            else return false;
+      return state.activities
+        .filter(
+          (activity) => {
+            if (activity.type) {
+              if (this.visibleActivities.includes(activity.type)) return true;
+              else return false;
+            }
+            return true;
           }
-          return true;
-        }
-        // activity.type && this.visibleActivities.includes(activity.type)
-      );
+          // activity.type && this.visibleActivities.includes(activity.type)
+        )
+        .sort((a, b) => {
+          const lookup = state.activityRank as Record<string, number>;
+          const arank = a.type ? lookup[a.type] : 999;
+          const brank = b.type ? lookup[b.type] : 999;
+          if (arank < brank) return -1;
+          if (arank > brank) return 1;
+          if (a.name < b.name) return -1;
+          if (a.name > b.name) return 1;
+          return 0;
+        });
     },
   },
   actions: {

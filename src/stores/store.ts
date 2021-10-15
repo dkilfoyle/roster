@@ -7,7 +7,7 @@ import { useMonthStore } from './monthStore';
 import { Time } from './models';
 import { holidays } from './holidays';
 import { User, getAuth } from 'firebase/auth';
-import { addDays } from 'date-fns';
+import { addDays, getDay, isFriday, nextMonday } from 'date-fns';
 import { isSameDay } from './utils';
 
 import { LoadingBar, Notify } from 'quasar';
@@ -309,20 +309,28 @@ export const useStore = defineStore('main', {
       const rosterStore = useRosterStore();
       return rosterStore
         .getRosterAtTime(date, time)
-        .filter((entry) => entry.smo == smoName && entry.activity != 'Call');
+        .filter((entry) => entry.smo == smoName);
+    },
+
+    getAssignedActivitiesNoCall(date: Date, time: Time, smoName: string) {
+      return this.getAssignedActivities(date, time, smoName).filter(
+        (entry) => entry.activity != 'Call'
+      );
     },
 
     /**
      * Is SMO already scheduled elsewhere
      */
     isAssignedSMO(date: Date, time: Time, smoName: string) {
-      return this.getAssignedActivities(date, time, smoName).length > 0;
+      return this.getAssignedActivitiesNoCall(date, time, smoName).length > 0;
     },
 
     isOnLeaveSMO(date: Date, smoName: string) {
-      const assigned = this.getAssignedActivities(date, 'AM', smoName).concat(
-        this.getAssignedActivities(date, 'PM', smoName)
-      );
+      const assigned = this.getAssignedActivitiesNoCall(
+        date,
+        'AM',
+        smoName
+      ).concat(this.getAssignedActivitiesNoCall(date, 'PM', smoName));
       return assigned.some((entry) => ['ANL', 'CME'].includes(entry.activity));
     },
 
@@ -381,6 +389,41 @@ export const useStore = defineStore('main', {
         );
     },
 
+    isValidEntry(
+      date: Date,
+      time: Time,
+      smoName: string,
+      activityName: string
+    ) {
+      const rosterStore = useRosterStore();
+      const result = {
+        answer: true,
+        reasons: Array<string>(),
+      };
+      if (activityName == 'Call') {
+        if (isFriday(date) && time == 'PM') {
+          const nextMondayEntry = rosterStore
+            .getRosterAtTime(nextMonday(date), 'AM')
+            .find((entry) => entry.smo == smoName && entry.activity == 'RT');
+          if (!nextMondayEntry)
+            result.reasons.push(
+              `Weekend B Call (${smoName}) should be followed by RT on Monday`
+            );
+        } else if (getDay(date) > 0 && getDay(date) < 5) {
+          // is BCall followed by TNP
+          const nextDayEntry = rosterStore
+            .getRosterAtTime(addDays(date, 1), 'AM')
+            .find((entry) => entry.smo == smoName && entry.activity == 'RT');
+          if (!nextDayEntry)
+            result.reasons.push(
+              `Call (${smoName}) should be followed by RT next day`
+            );
+        }
+      }
+      result.answer = result.reasons.length == 0;
+      return result;
+    },
+
     /**
      * Is smo valid at this date time - allowed to be scheduled, not already scheduled elsewhere
      */
@@ -391,37 +434,40 @@ export const useStore = defineStore('main', {
         reasons: Array<string>(),
       };
 
-      const assignedActivities = this.getAssignedActivities(
+      const assignedActivitiesNoCall = this.getAssignedActivitiesNoCall(
         date,
         time,
         smoName
       );
 
       // test if SMO already assigned to another activity at same date and time
-      if (assignedActivities.length > 1) {
+      if (assignedActivitiesNoCall.length > 1) {
         result.reasons.push(
-          `${smoName} is already assigned to ${assignedActivities
+          `${smoName} is already assigned to ${assignedActivitiesNoCall
             .map((x) => x.activity)
             .join(',')}`
         );
-      } else if (assignedActivities.length == 0) {
+      } else if (assignedActivitiesNoCall.length == 0) {
         if (smos.isAllowedTimeSMO(date, time, smoName))
           result.reasons.push(`${smoName} awaiting assignment`);
       } else {
         // foundTimeMatches.length == 1
-        const activityName = assignedActivities[0].activity;
+        const activityName = assignedActivitiesNoCall[0].activity;
         if (
           !smos.isAllowedTimeSMO(date, time, smoName) &&
-          !['NCT', 'WDHB', 'CDHB', 'UNI'].includes(activityName)
+          !['NCT', 'WDHB', 'CDHB', 'UNI', 'Call'].includes(activityName)
         ) {
-          result.reasons.push(`${smoName} is not contracted`);
+          result.reasons.push(`${smoName} is not contracted ${activityName}`);
         }
 
         if (
-          !smos.isAllowedActivitySMO(assignedActivities[0].activity, smoName)
+          !smos.isAllowedActivitySMO(
+            assignedActivitiesNoCall[0].activity,
+            smoName
+          )
         ) {
           result.reasons.push(
-            `${assignedActivities[0].activity} is not an allowed activity for ${smoName}`
+            `${assignedActivitiesNoCall[0].activity} is not an allowed activity for ${smoName}`
           );
         }
       }

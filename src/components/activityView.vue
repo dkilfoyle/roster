@@ -130,6 +130,14 @@ export default defineComponent({
           store.getActivitySum(activityName) <
           activity.perWeek * monthStore.numWeeks
         );
+      if (
+        typeof activity != 'undefined' &&
+        typeof activity.perMonth != 'undefined'
+      )
+        return (
+          store.getActivitySum(activityName) <
+          activity.perMonth
+        );
     };
 
     return {
