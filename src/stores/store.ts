@@ -175,6 +175,17 @@ export const useStore = defineStore('main', {
       monthStore.version = 'Final';
     },
 
+    async doDeleteNCT() {
+      const rosterStore = useRosterStore();
+
+      const ids = rosterStore.monthEntries
+        .filter((entry) =>
+          ['NCT', 'Uni', 'MAN', 'CDHB', 'WDHB', 'UNI'].includes(entry.activity)
+        )
+        .map((entry) => entry.id);
+      await rosterStore.delRosterEntries(ids);
+    },
+
     generateNCT() {
       // run only when creating new month otherwise
       console.log(

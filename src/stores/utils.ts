@@ -57,5 +57,5 @@ export const parseRRule = (rule: string, startDate: Date, endDate: Date) => {
     )
   );
 
-  return dates;
+  return dates.filter((date) => date >= startDate && date <= endDate);
 };

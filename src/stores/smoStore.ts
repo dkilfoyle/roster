@@ -43,6 +43,13 @@ export const useSMOStore = defineStore('smo', {
     },
   }),
   getters: {
+    activeSMOs(state) {
+      const monthStore = useMonthStore();
+      return state.smos.filter((smo) => {
+        if (smo.endDate && smo.endDate < monthStore.startDate) return false;
+        return true;
+      });
+    },
     visibleSMOs(state): Array<string> {
       const res: Array<string> = [];
       if (state.viewOptions.showCDHB) res.push(...['MMH', 'MSC']);
@@ -76,11 +83,9 @@ export const useSMOStore = defineStore('smo', {
       return res;
     },
 
-    filteredSMOs(state): Array<SMODefinition> {
-      const monthStore = useMonthStore();
-      return state.smos
+    filteredSMOs(): Array<SMODefinition> {
+      return this.activeSMOs
         .filter((smo) => {
-          if (smo.endDate && smo.endDate < monthStore.startDate) return false;
           return smo.activities.some((activity) => {
             if (this.visibleSMOs.includes(activity)) return true;
             else return false;
@@ -113,7 +118,9 @@ export const useSMOStore = defineStore('smo', {
       const qss = await getDocs(q);
       const loadsmos = Array<SMODefinition>();
       qss.forEach((doc) => {
-        loadsmos.push(doc.data() as SMODefinition);
+        const docData = doc.data() as SMODefinition;
+        if (docData.endDate) docData.endDate = new Date(docData.endDate);
+        loadsmos.push(docData);
       });
       this.smos = loadsmos;
       console.log(' - Loaded smos', this.smos.length);
@@ -130,8 +137,7 @@ export const useSMOStore = defineStore('smo', {
       return smo;
     },
     getAllowedSMOs(date: Date, activityName: string) {
-      return this.smos.filter((smo) => {
-        if (smo.endDate && date > smo.endDate) return false;
+      return this.activeSMOs.filter((smo) => {
         return smo.activities.includes(activityName);
       });
     },
@@ -147,7 +153,7 @@ export const useSMOStore = defineStore('smo', {
     },
 
     compile(dates: Date[]) {
-      this.smos.forEach((smo) => {
+      this.activeSMOs.forEach((smo) => {
         // console.log('Compiling smo ', smo.name);
 
         smo.allowedDates = {
@@ -187,29 +193,31 @@ export const useSMOStore = defineStore('smo', {
     },
     getNCTEntries(startDate: Date, endDate: Date) {
       const entries = Array<RosterData>();
-      this.smos.forEach((smo) => {
-        smo.NCT.forEach((nct) => {
-          parseRRule(nct.AM, startDate, endDate).forEach((date) =>
-            entries.push({
-              date,
-              time: 'AM',
-              smo: smo.name,
-              activity: nct.name,
-              notes: '',
-              version: '',
-            })
-          );
-          parseRRule(nct.PM, startDate, endDate).forEach((date) =>
-            entries.push({
-              date,
-              time: 'PM',
-              smo: smo.name,
-              activity: nct.name,
-              notes: '',
-              version: '',
-            })
-          );
-        });
+      this.activeSMOs.forEach((smo) => {
+        if (smo.generateNCT) {
+          smo.NCT.forEach((nct) => {
+            parseRRule(nct.AM, startDate, endDate).forEach((date) =>
+              entries.push({
+                date,
+                time: 'AM',
+                smo: smo.name,
+                activity: nct.name,
+                notes: '',
+                version: '',
+              })
+            );
+            parseRRule(nct.PM, startDate, endDate).forEach((date) =>
+              entries.push({
+                date,
+                time: 'PM',
+                smo: smo.name,
+                activity: nct.name,
+                notes: '',
+                version: '',
+              })
+            );
+          });
+        }
       });
       return entries;
     },

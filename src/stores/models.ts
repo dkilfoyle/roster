@@ -88,4 +88,5 @@ export interface SMODefinition {
     PM: Array<Date>;
   };
   group: number;
+  generateNCT: boolean;
 }

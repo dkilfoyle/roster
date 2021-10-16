@@ -52,6 +52,7 @@ export const useMonthStore = defineStore('month', {
         endDate,
         numWeeks,
         dates,
+        version: 'Final',
       });
     },
     setPrevMonth() {

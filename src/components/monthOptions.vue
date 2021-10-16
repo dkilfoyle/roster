@@ -154,6 +154,7 @@
       </q-card>
     </q-dialog>
     <q-btn color="primary" @click="exportXLS" icon="file_download" label="Export Excel"></q-btn>
+    <!-- <q-btn color="primary" @click="store.doDeleteNCT" icon="file_download" label="Delete NCT"></q-btn> -->
   </div>
 </template>
 
