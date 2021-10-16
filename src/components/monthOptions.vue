@@ -159,7 +159,7 @@
 
 <script lang="ts">
 import { defineComponent, reactive, watch, toRefs } from 'vue';
-import { format, isMonday } from 'date-fns';
+import { format, isFriday, isMonday } from 'date-fns';
 import { useStore } from '../stores/store';
 import { useMonthStore } from '../stores/monthStore';
 import { useRosterStore } from '../stores/rosterStore';
@@ -210,6 +210,13 @@ export default defineComponent({
       const weekColor = ['FFCCFFCC', '00FFFFFF'];
       let weekColorSelector = true;
 
+      function colName(num: number) {
+        for (var ret = '', a = 1, b = 26; (num -= a) >= 0; a = b, b *= 26) {
+          ret = String.fromCharCode((num % b) / a + 65) + ret;
+        }
+        return ret;
+      }
+
       const colorWhite = 'FFFFFFFF';
       const colorBlue = 'FF3366FF';
       const colorRed = 'FFFF0000';
@@ -219,7 +226,38 @@ export default defineComponent({
       const colorLightGreen = 'FF92D050'
       const colorLightBlue = 'FF92CDDC';
       const colorPink = 'FFFF3399';
-      const colorBlack = 'FF000000'
+      const colorBlack = 'FF000000';
+      const colorLightGrey = 'FFC0C0C0';
+      const colorDarkGrey = 'ff808080';
+
+      const activitySummary: Record<string, number> = {
+        OPC: 0,
+        DSR: 0,
+        DSC: 0,
+        ACT: 0,
+        EMG: 0,
+        TNP: 0
+      };
+
+      const pos = {
+        dayRow: 2,
+        dayStartCol: 3,
+        dateRow: 3,
+        dateStartCol: 3,
+        timeCol: 2,
+        smoCol: 1,
+        actStartCol: 3,
+        actStartRow: 4,
+        actEndCol: 2 + monthStore.dates.length,
+        actEndRow: 3 + smoStore.filteredSMOs2.length,
+        sumStartCol: 2 + monthStore.dates.length + 2,
+        sumStartRow: 4,
+        sumEndCol: 2 + monthStore.dates.length + 1 + Object.keys(activitySummary).length,
+        sumEndRow: 3 + smoStore.filteredSMOs2.length,
+        sumSumStartCol: 2 + monthStore.dates.length + 2,
+        sumSumStartRow: 3 + smoStore.filteredSMOs2.length + 1,
+        smoStartRow: 4,
+      }
 
       const activityFillColor = {
         TBH: colorGreen,
@@ -254,12 +292,12 @@ export default defineComponent({
       // days and date headers
       monthStore.dates.forEach((date, i) => {
 
-        const dayCell = sheet.getCell(2, 3 + i)
+        const dayCell = sheet.getCell(pos.dayRow, pos.dayStartCol + i)
         dayCell.value = format(date, 'ccc');
         dayCell.font = { color: { argb: colorBlue }, bold: true };
         dayCell.alignment = { horizontal: 'center' }
 
-        const dateCell = sheet.getCell(3, 3 + i);
+        const dateCell = sheet.getCell(pos.dateRow, pos.dateStartCol + i);
         dateCell.alignment = { horizontal: 'center' };
         dateCell.value = format(date, 'd');
         dateCell.font = { color: { argb: colorWhite }, bold: true, size: 14 };
@@ -272,11 +310,31 @@ export default defineComponent({
         }
       })
 
+
+      const zeroActivitySummary = () => {
+        activitySummary.OPC = 0;
+        activitySummary.DSR = 0;
+        activitySummary.DSC = 0;
+        activitySummary.ACT = 0;
+        activitySummary.EMG = 0;
+        activitySummary.TNP = 0;
+      }
+
+      // activity summary headers
+      Object.keys(activitySummary).forEach((activity, i) => {
+        const sumCell = sheet.getCell(pos.sumStartRow - 1, pos.sumStartCol + i);
+        sumCell.value = activity;
+        sumCell.alignment = { horizontal: 'center' }
+        sumCell.font = { bold: true };
+        sumCell.border = { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' } }
+        if (!(i % 2)) sumCell.fill = solidFill(colorLightGrey);
+      })
+
       smoStore.filteredSMOs2.forEach((smo, i) => {
 
         if (i % 2) {
           // Empty cell below SMO name
-          sheet.getCell(4 + i, 1).border = { bottom: { style: 'medium' } };
+          sheet.getCell(pos.smoStartRow + i, 1).border = { bottom: { style: 'medium' } };
           // PM
           const pmCell = sheet.getCell(4 + i, 2)
           pmCell.value = 'PM';
@@ -284,8 +342,9 @@ export default defineComponent({
           pmCell.fill = solidFill(colorBlue);
           pmCell.font = { color: { argb: colorWhite }, name: 'arial', size: 10 };
         } else {
+          zeroActivitySummary();
           // smo name
-          const smoCell = sheet.getCell(4 + i, 1);
+          const smoCell = sheet.getCell(pos.smoStartRow + i, 1);
           smoCell.value = smo.fullName;
           smoCell.font = { color: { argb: colorBlue }, name: 'arial', size: 10 };
           // AM
@@ -295,10 +354,8 @@ export default defineComponent({
           amCell.border = { left: { style: 'medium' } };
         }
 
-
-
         monthStore.dates.forEach((date, j) => {
-          const cell = sheet.getCell(4 + i, 3 + j);
+          const cell = sheet.getCell(pos.actStartRow + i, pos.actStartCol + j);
 
           if (j % 5 == 0) weekColorSelector = !weekColorSelector;
           cell.fill = solidFill(weekColor[weekColorSelector ? 1 : 0])
@@ -313,8 +370,7 @@ export default defineComponent({
             date,
             time: i % 2 ? 'PM' : 'AM',
             smo: smo.name
-          });
-
+          }).filter((entry) => entry.activity != 'Call');
 
           cell.font = { color: { argb: colorRed }, size: 8, name: 'arial' };
           cell.alignment = { horizontal: 'center' };
@@ -322,6 +378,8 @@ export default defineComponent({
 
           if (assignedEntries.length && assignedEntries[0].activity) {
             const activity = assignedEntries[0].activity;
+            if (!(activitySummary[activity] == undefined)) activitySummary[activity] = activitySummary[activity] + 1;
+
             if (activity == 'CRS_GP')
               cell.value = 'CRS'
             else if (activity == 'CRS_ACT')
@@ -339,11 +397,88 @@ export default defineComponent({
           }
 
         });
+
+        // function convertLetterToNumber(str: string) {
+        //   str = str.toUpperCase();
+        //   let out = 0, len = str.length;
+        //   for (let pos = 0; pos < len; pos++) {
+        //     out += (str.charCodeAt(pos) - 64) * Math.pow(26, len - pos - 1);
+        //   }
+        //   return out;
+        // }
+
+
+
+        // activity summaries
+        if (!(i % 2)) {
+          Object.keys(activitySummary).forEach((activity, k) => {
+            const cell = sheet.getCell(pos.sumStartRow + i, pos.sumStartCol + k);
+            const emptyCell = sheet.getCell(pos.sumStartRow + i + 1, pos.sumStartCol + k);
+            cell.value = { formula: `COUNTIF((${colName(pos.actStartCol)}${pos.actStartRow + i}:${colName(pos.actEndCol)}${pos.actStartRow + i + 1}), "${activity}")`, date1904: true }; //activitySummary[activity] ? activitySummary[activity] : ''
+            cell.numFmt = '[=0]"";General';
+            cell.alignment = { horizontal: 'center' }
+            cell.alignment = { horizontal: 'center' }
+            cell.font = { bold: true };
+            cell.border = { top: { style: 'medium' }, bottom: { style: 'thin' }, left: { style: 'thin' } }
+            emptyCell.border = { left: { style: 'thin' } }
+            if (!(k % 2)) {
+              cell.fill = solidFill(colorLightGrey);
+              emptyCell.fill = solidFill(colorLightGrey);
+            }
+          })
+        }
+      });
+
+      // sum of sums
+      Object.keys(activitySummary).forEach((activity, k) => {
+        const cell = sheet.getCell(pos.sumEndRow + 1, pos.sumStartCol + k);
+        cell.value = { formula: `sum(${colName(pos.sumStartCol + k)}${pos.sumStartRow}:${colName(pos.sumStartCol + k)}${pos.sumEndRow})`, date1904: true }
+        cell.fill = solidFill(colorDarkGrey);
+        cell.font = { color: { argb: colorWhite } }
+        cell.border = { left: { style: 'thin' } }
+        cell.alignment = { horizontal: 'center' }
+      })
+
+      // On Call
+      const callCellA = sheet.getCell(pos.actEndRow + 1, pos.actStartCol - 2);
+      callCellA.value = 'A Call';
+      callCellA.font = { color: { argb: colorWhite }, bold: true }
+      callCellA.fill = solidFill(colorBlack);
+      let callCellB = sheet.getCell(pos.actEndRow + 2, pos.actStartCol - 2);
+      callCellB.value = 'B Call';
+      callCellB.font = { color: { argb: colorWhite }, bold: true }
+      callCellB.fill = solidFill(colorBlack);
+      monthStore.dates.forEach((date, i) => {
+        const amCall = rosterStore.filter({
+          date,
+          activity: 'Call',
+          time: 'AM'
+        });
+        const pmCall = rosterStore.filter({
+          date,
+          activity: 'Call',
+          time: 'PM'
+        });
+        const cell = sheet.getCell(pos.actEndRow + 1, pos.actStartCol + i);
+        cell.value = amCall.length ? amCall[0].smo : '?';
+        cell.alignment = { horizontal: 'center' }
+        cell.font = { color: { argb: colorWhite }, bold: true }
+        cell.fill = solidFill(colorBlack);
+        if (isFriday(date) || store.isHoliday(date)) {
+          const pmCallCell = sheet.getCell(pos.actEndRow + 2, pos.actStartCol + i);
+          pmCallCell.value = pmCall.length ? pmCall[0].smo : '?'
+          pmCallCell.alignment = { horizontal: 'center' }
+          pmCallCell.font = { color: { argb: colorWhite }, bold: true }
+          pmCallCell.fill = solidFill(colorRed);
+          cell.fill = solidFill(colorRed);
+          cell.border = { bottom: { style: 'thin' } }
+        }
       });
 
       sheet.getColumn(1).width = 18;
       sheet.getColumn(2).width = 4;
       monthStore.dates.forEach((date, i) => { sheet.getColumn(3 + i).width = 6 });
+      Object.keys(activitySummary).forEach((_, i) => sheet.getColumn(pos.sumStartCol + i).width = 5)
 
       const createOuterBorder = (worksheet: excelJS.Worksheet, start = { row: 1, col: 1 }, end = { row: 1, col: 1 }, borderWidth: excelJS.BorderStyle = 'medium') => {
         const borderStyle = {
@@ -377,6 +512,7 @@ export default defineComponent({
       }
 
       createOuterBorder(sheet, { row: 2, col: 1 }, { row: 3 + smoStore.filteredSMOs2.length, col: 2 + monthStore.dates.length });
+      createOuterBorder(sheet, { row: pos.sumStartRow - 1, col: pos.sumStartCol }, { row: pos.sumEndRow + 1, col: pos.sumEndCol });
 
       void workbook.xlsx.writeBuffer().then(function (buffer) {
         const blob = new Blob([buffer], { type: 'applicationi/xlsx' });
