@@ -18,6 +18,10 @@ td.invalid {
   color: darkred;
 }
 
+td.selected {
+  background: yellow !important;
+}
+
 td.week-0 {
   background: lightgreen;
 }

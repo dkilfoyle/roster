@@ -3,7 +3,12 @@
     <q-markup-table dense class="sticky-column-table">
       <thead>
         <tr>
-          <th></th>
+          <th>
+            <q-badge color="red" v-if="selectedCells.length" @click="clearSelection">
+              {{ selectedCells.length }}
+              <q-icon name="clear" color="white"></q-icon>
+            </q-badge>
+          </th>
           <th></th>
           <th v-for="date in monthStore.dates" :key="date.toDateString()">{{ format(date, 'dd') }}</th>
         </tr>
@@ -56,6 +61,9 @@
             :dateStr="date.toDateString()"
             :time="i % 2 ? 'PM' : 'AM'"
             :smoName="smo.name"
+            :isSelected="isSelected(date, i % 2 ? 'PM' : 'AM', smo.name)"
+            @onSelectCell="selectCell"
+            @onSelectionSetActivity="selectionSetActivity"
           ></smo-cell>
         </tr>
       </transition-group>
@@ -64,13 +72,15 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, reactive } from 'vue';
 import { useStore } from '../stores/store';
 import { useSMOStore } from 'src/stores/smoStore';
 import { useMonthStore } from 'src/stores/monthStore';
 
 import smoCell from './smoCell.vue';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
+import { SMOCellDefinition, Time } from 'src/stores/models';
+import { useRosterStore } from 'src/stores/rosterStore';
 
 export default defineComponent({
   // name: 'ComponentName'
@@ -82,13 +92,58 @@ export default defineComponent({
 
     const showSMOFilterMenu = ref(false);
 
+    const selectedCells = reactive(Array<SMOCellDefinition>());
+    const isSelected = (date: Date, time: Time, smoName: string) => {
+      return selectedCells.some((cell) => isSameDay(date, cell.date) && cell.time == time && cell.smoName == smoName)
+    }
+    const selectCell = (e: SMOCellDefinition) => {
+      const index = selectedCells.findIndex((cell) => isSameDay(e.date, cell.date) && cell.time == e.time && cell.smoName == e.smoName);
+      console.log('selectCell: ', e)
+      if (index == -1)
+        selectedCells.push(e);
+      else selectedCells.splice(index)
+    }
+    const clearSelection = () => {
+      selectedCells.splice(0, selectedCells.length);
+    }
+    const selectionSetActivity = (activityName: string) => {
+      const rosterStore = useRosterStore();
+      selectedCells.forEach((cell) => {
+        const entries = rosterStore.filter({
+          date: cell.date,
+          time: cell.time,
+          smo: cell.smoName
+        })
+        if (entries.length) {
+          void rosterStore.setRosterEntry(entries[0].id, {
+            activity: activityName,
+          });
+        } else {
+          void rosterStore.addRosterEntry({
+            smo: cell.smoName,
+            date: cell.date,
+            time: cell.time,
+            activity: activityName,
+            notes: '',
+            version: monthStore.version,
+          });
+        }
+      })
+      clearSelection();
+    }
+
 
     return {
       store,
       smoStore,
       monthStore,
       format,
-      showSMOFilterMenu
+      showSMOFilterMenu,
+      isSelected,
+      selectCell,
+      selectedCells,
+      clearSelection,
+      selectionSetActivity
     };
   },
 });

@@ -90,3 +90,9 @@ export interface SMODefinition {
   group: number;
   generateNCT: boolean;
 }
+
+export interface SMOCellDefinition {
+  smoName: string;
+  time: Time;
+  date: Date;
+}

@@ -3,27 +3,23 @@
     <div class="col">
       <q-list dense>
         <q-item
-          v-for="(item, i) in items.slice(0, Math.ceil(items.length / 2))"
+          v-for="(item, i) in items.length > 10 ? items.slice(0, 10) : items"
           :key="i"
           clickable
-          @click="toggleItem(i)"
+          @click="toggleItem(item)"
         >
-          <q-item-section>{{ item }}</q-item-section>
+          <q-item-section>
+            <div :class="colors ? 'text-' + colors[i] : ''">{{ item }}</div>
+          </q-item-section>
         </q-item>
       </q-list>
     </div>
-    <div class="col">
-      <q-list dense v-if="items.length > 1">
-        <q-item
-          v-for="(item, i) in items.slice(
-            Math.ceil(items.length / 2),
-            items.length
-          )"
-          :key="i"
-          clickable
-          @click="toggleItem(Math.ceil(items.length / 2) + i)"
-        >
-          <q-item-section>{{ item }}</q-item-section>
+    <div class="col" v-if="items.length > 10">
+      <q-list dense>
+        <q-item v-for="(item, i) in items.slice(10)" :key="i" clickable @click="toggleItem(item)">
+          <q-item-section>
+            <div :class="colors ? 'text-' + colors[i] : ''">{{ item }}</div>
+          </q-item-section>
         </q-item>
       </q-list>
     </div>
@@ -31,19 +27,22 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, toRefs } from 'vue';
+import { defineComponent, toRefs, PropType } from 'vue';
 
 export default defineComponent({
   name: 'twoColList',
   props: {
     items: {
-      type: Array,
+      type: Array as PropType<Array<string>>,
       required: true,
+    },
+    colors: {
+      type: Array as PropType<Array<string>>,
     },
   },
   setup(props, { emit }) {
-    const toggleItem = (i: number) => {
-      emit('clickItem', i);
+    const toggleItem = (item: string) => {
+      emit('onClickItem', item);
     };
     return {
       ...toRefs(props),
@@ -53,4 +52,5 @@ export default defineComponent({
 });
 </script>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+</style>

@@ -1,6 +1,10 @@
 <template>
-  <td :class="tdClasses">
-    <q-menu context-menu v-if="!monthStore.isArchived">
+  <td
+    :class="tdClasses"
+    @click.prevent="tdClick($event)"
+    @contextmenu.prevent="notesMenu = !notesMenu"
+  >
+    <q-menu v-if="!monthStore.isArchived" v-model="notesMenu" no-parent-event>
       <q-card style="min-width: 350px">
         <q-card-section>
           <div class="text-h8">Notes for {{ smoName }} on {{ dateStr }}</div>
@@ -22,36 +26,37 @@
         </q-card-actions>
       </q-card>
     </q-menu>
-    <q-menu style="min-height: 300px" v-model="activityMenu" v-if="!monthStore.isArchived">
+    <q-menu
+      style="min-height: 300px"
+      v-model="activityMenu"
+      v-if="!monthStore.isArchived"
+      no-parent-event
+      @hide="isEditing = false"
+      @before-show="isEditing = true"
+    >
       <div class="row q-pa-md bg-info q-mb-sm">
-        <div class="col">{{ smoName }} on {{ dateStr }}</div>
+        <div class="col" v-if="isSelected">Selected Cell(s)</div>
+        <div class="col" v-else>{{ smoName }} on {{ dateStr }}</div>
         <q-btn class="col-auto" icon="close" size="sm" @click="activityMenu = false"></q-btn>
       </div>
       <div class="text-center"></div>
       <q-tabs v-model="cellTab" class="q-mt-md">
-        <q-tab name="assigned" label="Cur">
+        <q-tab name="assigned" label="Cur" v-if="!isSelected">
           <q-badge
             :color="assignedActivities.length > 0 ? 'green' : 'red'"
             floating
           >{{ assignedActivities.length }}</q-badge>
         </q-tab>
-        <q-tab name="available" label="Avail">
+        <q-tab name="available" label="Avail" v-if="!isSelected">
           <q-badge
             :color="availableActivities.length > 0 ? 'green' : 'red'"
             floating
           >{{ availableActivities.length }}</q-badge>
         </q-tab>
-        <q-tab name="unavailable" label="Unavail">
-          <q-badge color="red" floating>
+        <q-tab name="all" label="All">
+          <q-badge color="green" floating>
             {{
-              unavailableActivities.length
-            }}
-          </q-badge>
-        </q-tab>
-        <q-tab name="others" label="Others">
-          <q-badge color="amber" floating>
-            {{
-              incapableActivities.length
+              allActivities.length
             }}
           </q-badge>
         </q-tab>
@@ -59,25 +64,23 @@
       <q-separator></q-separator>
       <q-tab-panels v-model="cellTab" animated>
         <q-tab-panel name="assigned">
-          <two-col-list :items="assignedActivities" @clickItem="(i) => removeActivity(i)"></two-col-list>
+          <two-col-list :items="assignedActivities" @onClickItem="removeActivity"></two-col-list>
         </q-tab-panel>
         <q-tab-panel name="available">
-          <two-col-list
-            :items="availableActivities"
-            @clickItem="(i) => setActivity(availableActivities[i])"
-          ></two-col-list>
+          <activity-selector :activities="availableActivities" @onClickItem="setActivity"></activity-selector>
         </q-tab-panel>
         <q-tab-panel name="unavailable">
-          <two-col-list
-            :items="unavailableActivities"
-            @clickItem="(i) => setActivity(unavailableActivities[i])"
-          ></two-col-list>
+          <activity-selector :activities="unavailableActivities" @onClickItem="setActivity"></activity-selector>
         </q-tab-panel>
         <q-tab-panel name="others">
-          <two-col-list
-            :items="incapableActivities"
-            @clickItem="(i) => setActivity(incapableActivities[i])"
-          ></two-col-list>
+          <activity-selector :activities="incapableActivities" @onClickItem="setActivity"></activity-selector>
+        </q-tab-panel>
+        <q-tab-panel name="all">
+          <activity-selector
+            :activities="allActivities"
+            :colors="allColors"
+            @onClickItem="setActivity"
+          ></activity-selector>
         </q-tab-panel>
       </q-tab-panels>
     </q-menu>
@@ -107,6 +110,7 @@
 <script lang="ts">
 import { defineComponent, toRefs, computed, PropType, ref } from 'vue';
 import twoColList from './twoColList.vue';
+import activitySelector from './activitySelector.vue';
 import { useStore } from '../stores/store';
 import { useSMOStore } from '../stores/smoStore';
 import { isSunday, isFriday } from 'date-fns';
@@ -114,6 +118,7 @@ import { Time } from '../stores/models';
 import { useActivityStore } from 'src/stores/activityStore';
 import { useRosterStore } from 'src/stores/rosterStore';
 import { useMonthStore } from 'src/stores/monthStore';
+import { isDeepStrictEqual } from 'util';
 
 export default defineComponent({
   // name: 'ComponentName'
@@ -131,10 +136,14 @@ export default defineComponent({
       type: String,
       required: true,
     },
+    isSelected: {
+      type: Boolean,
+      required: true
+    }
   },
-  components: { twoColList },
-  setup(props) {
-    const { dateStr, time, smoName } = toRefs(props);
+  components: { twoColList, activitySelector },
+  setup(props, { emit }) {
+    const { dateStr, time, smoName, isSelected } = toRefs(props);
     const date = ref(new Date(dateStr.value));
 
     const store = useStore();
@@ -152,6 +161,18 @@ export default defineComponent({
     });
 
     const activityMenu = ref(false);
+    const notesMenu = ref(false);
+    const isEditing = ref(false);
+
+
+    const tdClick = (e: MouseEvent) => {
+      if (e.ctrlKey) {
+        emit('onSelectCell', { date: date.value, time: time.value, smoName: smoName.value })
+      } else {
+        cellTab.value = isSelected.value ? 'all' : 'available';
+        activityMenu.value = !activityMenu.value;
+      }
+    }
 
     const saveNotes = () => {
       assignedEntries.value.forEach(
@@ -160,19 +181,22 @@ export default defineComponent({
       );
     };
 
-    const cellTab = ref('available');
+    const cellTab = ref(isSelected.value ? 'all' : 'available');
 
-    const removeActivity = (activityNum: number) => {
-      void rosterStore.delRosterEntry(assignedEntries.value[activityNum].id);
+    const removeActivity = (activityName: string) => {
+      const activity = assignedEntries.value.find((entry) => entry.activity == activityName);
+      if (activity) void rosterStore.delRosterEntry(activity.id);
     };
 
     const setActivity = (activityName: string) => {
-      // setActivity replaces only the first activity if there are multiple assigned activities
-      if (assignedEntries.value.length) {
-        void rosterStore.setRosterEntry(assignedEntries.value[0].id, {
-          activity: activityName,
-        });
-      } else addActivity(activityName);
+      if (isSelected.value) emit('onSelectionSetActivity', activityName); else {
+        // setActivity replaces only the first activity if there are multiple assigned activities
+        if (assignedEntries.value.length) {
+          void rosterStore.setRosterEntry(assignedEntries.value[0].id, {
+            activity: activityName,
+          });
+        } else addActivity(activityName);
+      }
       activityMenu.value = false;
     };
 
@@ -190,6 +214,16 @@ export default defineComponent({
     };
 
     const isHoliday = computed(() => store.isHoliday(date.value));
+
+    const allActivities = computed(() => activityStore.activities.map((activity) => activity.name));
+
+    const allColors = computed(() => {
+      return activityStore.activities.map((activity) => {
+        if (availableActivities.value.includes(activity.name)) return 'black';
+        else if (unavailableActivities.value.includes(activity.name)) return 'orange';
+        else return 'red';
+      })
+    })
 
     const capableActivities = computed(
       () => smoStore.getSMO(smoName.value).activities
@@ -279,6 +313,7 @@ export default defineComponent({
               assignedActivities.value[0]
             ),
           note: tdHasNotes.value,
+          selected: isSelected.value || isEditing.value
         },
       ];
 
@@ -317,10 +352,15 @@ export default defineComponent({
       }
     });
 
+
+
     return {
+      activityStore,
+      monthStore,
       saveNotes,
       cellTab,
       activityMenu,
+      notesMenu,
       addActivity,
       removeActivity,
       setActivity,
@@ -335,8 +375,11 @@ export default defineComponent({
       tdContent,
       tdClasses,
       date,
-      monthStore,
-      errors
+      errors,
+      tdClick,
+      allActivities,
+      allColors,
+      isEditing
     };
   },
 });

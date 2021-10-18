@@ -468,7 +468,7 @@ export const useStore = defineStore('main', {
           !smos.isAllowedTimeSMO(date, time, smoName) &&
           !['NCT', 'WDHB', 'CDHB', 'UNI', 'Call'].includes(activityName)
         ) {
-          result.reasons.push(`${smoName} is not contracted ${activityName}`);
+          result.reasons.push(`${smoName} is not contracted`);
         }
 
         if (
