@@ -79,10 +79,11 @@ export default defineComponent({
             position: 'bottom-right',
           });
         } else
-          emit('onSelectCell', { date: date.value, time: time.value, smoName: smoName.value })
+          emit('onSelectCell', { date: date.value, time: time.value, smoName: smoName.value, capableActivities, allowedActivities })
       } else if (selectedActivity.value == 'erase') {
         // erase cell
-        assignedEntries.value.forEach((entry) => void rosterStore.delRosterEntry(assignedEntries.value[0].id))
+        // TODO: If > 1 entry present dialog to select which to delete
+        assignedEntries.value.forEach((entry) => void rosterStore.delRosterEntry(entry.id))
       } else {
         // set to selected activity
         // console.log('setting ', selectedActivity.value)

@@ -95,4 +95,6 @@ export interface SMOCellDefinition {
   smoName: string;
   time: Time;
   date: Date;
+  capableActivities: Array<string>;
+  allowedActivities: Array<string>;
 }

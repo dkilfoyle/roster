@@ -30,7 +30,7 @@
       <q-dialog v-model="confirmEraseSelectedDialog" persistent>
         <q-card>
           <q-card-section class="row items-center">
-            <q-avatar icon="alert" color="negative" text-color="white" />
+            <q-avatar icon="priority_high" color="negative" text-color="white" />
             <span class="q-ml-sm">This will erase {{ selectedCells.length }} selected SMO sessions</span>
           </q-card-section>
 
@@ -105,7 +105,7 @@
             :smoName="smo.name"
             :isSelected="isSelected(date, i % 2 ? 'PM' : 'AM', smo.name)"
             :selectedActivity="activityButton || ''"
-            @onSelectCell="selectCell"
+            @onSelectCell="onSelectCell"
           ></smo-cell>
         </tr>
       </transition-group>
@@ -122,7 +122,7 @@ import { useActivityStore } from 'src/stores/activityStore';
 
 import smoCell from './smoCell.vue';
 import { format, isSameDay } from 'date-fns';
-import { SMOCellDefinition, Time } from 'src/stores/models';
+import { ActivityDefinition, SMOCellDefinition, Time } from 'src/stores/models';
 import { useRosterStore } from 'src/stores/rosterStore';
 
 export default defineComponent({
@@ -142,26 +142,42 @@ export default defineComponent({
       icon?: string,
       label?: string
     };
-    const activityButtons1 = computed(() => {
-      const activities = activityStore.activities.filter((activity) => activity.name != 'Call' && activity.type && !['Leave', 'NCT'].includes(activity.type)).map((activity) => ({
+
+    const getPage1Activities = () => activityStore.activities.filter((activity) => activity.name != 'Call' && activity.type && !['Leave', 'NCT'].includes(activity.type));
+    const getPage2Activities = () => activityStore.activities.filter((activity) => activity.name != 'Call' && activity.type && ['Leave', 'NCT'].includes(activity.type));
+
+    const getActivityButtons = (activities: Array<ActivityDefinition>) => {
+
+      const getActivityButtonColor = (activity: string) => {
+        let allowed = selectedCells[0].allowedActivities;
+        let capable = selectedCells[0].capableActivities;
+        selectedCells.forEach((cell) => {
+          allowed = allowed.filter((x) => cell.allowedActivities.includes(x))
+          capable = capable.filter((x) => cell.capableActivities.includes(x))
+        });
+
+        if (allowed.includes(activity)) return 'black';
+        if (capable.includes(activity)) return 'red';
+        return 'grey-3'
+      }
+
+      const buttons = activities.map((activity) => ({
         label: activity.name.toUpperCase(),
         value: activity.name,
+        textColor: selectedCells.length ? getActivityButtonColor(activity.name) : 'black'
       })).sort((a, b) => a.label < b.label ? -1 : a.label == b.label ? 0 : 1);
-      (activities as btndef[]).splice(0, 0, { value: 'erase', icon: 'backspace' });
-      return activities;
-    });
-    const activityButtons2 = computed(() => {
-      const activities = activityStore.activities.filter((activity) => activity.type && ['Leave', 'NCT'].includes(activity.type)).map((activity) => ({
-        label: activity.name.toUpperCase(),
-        value: activity.name,
-      })).sort((a, b) => a.label < b.label ? -1 : a.label == b.label ? 0 : 1);
-      (activities as btndef[]).splice(0, 0, { value: 'erase', icon: 'backspace' });
-      return activities;
-    });
-    const clickActivityButton = (value: any) => {
+      (buttons as btndef[]).splice(0, 0, { value: 'erase', icon: 'backspace' });
+      return buttons;
+    }
+
+    const activityButtons1 = computed(() => getActivityButtons(getPage1Activities()));
+    const activityButtons2 = computed(() => getActivityButtons(getPage2Activities()));
+
+    const clickActivityButton = (value: string) => {
+      console.log('clicked ', value, selectedCells.length, value && selectedCells.length)
       if (value && selectedCells.length) {
         if (value == 'erase') {
-          confirmEraseSelectedDialog.value = true;
+          if (selectedCells.length > 1) confirmEraseSelectedDialog.value = true; else doEraseSelected();
         } else {
           setSelectedCellsToActivity(value);
         }
@@ -176,6 +192,8 @@ export default defineComponent({
           smo: cell.smoName,
         }).filter(entry => entry.activity != 'Call').forEach((entry) => void rosterStore.delRosterEntry(entry.id));
       });
+      activityButton.value = '';
+      clearSelection();
     }
     const setSelectedCellsToActivity = (activityName: string) => {
       selectedCells.forEach((cell) => {
@@ -187,7 +205,7 @@ export default defineComponent({
         if (cellEntries.length) {
           // replace first entry in cell
           void rosterStore.setRosterEntry(cellEntries[0].id, {
-            activity: activityButton.value,
+            activity: activityName
           });
         } else {
           // create new entry
@@ -211,7 +229,7 @@ export default defineComponent({
     const isSelected = (date: Date, time: Time, smoName: string) => {
       return selectedCells.some((cell) => isSameDay(date, cell.date) && cell.time == time && cell.smoName == smoName)
     }
-    const selectCell = (e: SMOCellDefinition) => {
+    const onSelectCell = (e: SMOCellDefinition) => {
       const index = selectedCells.findIndex((cell) => isSameDay(e.date, cell.date) && cell.time == e.time && cell.smoName == e.smoName);
       console.log('selectCell: ', e)
       if (index == -1)
@@ -241,7 +259,7 @@ export default defineComponent({
       format,
       showSMOFilterMenu,
       isSelected,
-      selectCell,
+      onSelectCell,
       selectedCells,
       clearSelection,
     };
