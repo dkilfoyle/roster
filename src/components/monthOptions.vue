@@ -135,7 +135,7 @@
       :disable="monthStore.isArchived"
       @click="confirmNCT = true"
       icon="update"
-      label="Load NCT"
+      label="Load NCT and CRS"
     ></q-btn>
     <q-dialog v-model="confirmNCT" persistent>
       <q-card>
@@ -145,11 +145,17 @@
 
         <q-card-section
           class="q-pt-none"
-        >Generating NCT will overwrite any exists entries in the current month</q-card-section>
+        >Generating NCT will overwrite any existing entries in the current month</q-card-section>
 
         <q-card-actions align="right">
           <q-btn flat label="Cancel" color="primary" v-close-popup />
-          <q-btn flat label="Confirm" color="primary" @click="store.generateNCT" v-close-popup />
+          <q-btn
+            flat
+            label="Confirm"
+            color="primary"
+            @click="store.generateNCTandCRS"
+            v-close-popup
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>

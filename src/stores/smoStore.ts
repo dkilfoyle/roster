@@ -40,6 +40,7 @@ export const useSMOStore = defineStore('smo', {
       showCDHB: true,
       showBTX: true,
       showOther: true,
+      availabilityLimitUnassigned: true,
     },
   }),
   getters: {
@@ -218,6 +219,22 @@ export const useSMOStore = defineStore('smo', {
             );
           });
         }
+      });
+      return entries;
+    },
+    getCRSEntries(startDate: Date, endDate: Date) {
+      const entries = Array<RosterData>();
+      this.activeSMOs.forEach((smo) => {
+        parseRRule('every Thursday', startDate, endDate).forEach((date) =>
+          entries.push({
+            date,
+            time: 'PM',
+            smo: smo.name,
+            activity: 'CRS',
+            notes: '',
+            version: '',
+          })
+        );
       });
       return entries;
     },

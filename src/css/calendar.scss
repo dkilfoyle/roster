@@ -62,7 +62,7 @@ $orange-3: #ffcc80 !default;
 $orange-4: #ffb74d !default;
 
 .sticky-column-table {
-  height: calc(100vh - 50px - 48px);
+  height: calc(100vh - 50px - 36px - 16px - 48px);
   cursor: default;
   thead {
     // first two rows are sticky
@@ -103,7 +103,6 @@ $orange-4: #ffb74d !default;
 
   tbody {
     cursor: pointer;
-
     // first two columns
     td:first-child,
     td:nth-child(2) {
@@ -137,7 +136,7 @@ $orange-4: #ffb74d !default;
 
 .sticky-summary-table {
   height: calc(100vh - 50px - 48px);
-  cursor: default;
+
   thead {
     tr:first-child,
     tr:nth-child(2) {

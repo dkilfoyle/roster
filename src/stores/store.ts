@@ -186,7 +186,7 @@ export const useStore = defineStore('main', {
       await rosterStore.delRosterEntries(ids);
     },
 
-    generateNCT() {
+    generateNCTandCRS() {
       // run only when creating new month otherwise
       console.log(
         'Warning: compile SMOs will reset any existing NCT times back to NCT default'
@@ -197,6 +197,16 @@ export const useStore = defineStore('main', {
 
       smoStore
         .getNCTEntries(monthStore.startDate, monthStore.endDate)
+        .forEach((entry) => {
+          void rosterStore.addRosterEntry({
+            ...entry,
+            notes: '',
+            version: monthStore.version,
+          });
+        });
+
+      smoStore
+        .getCRSEntries(monthStore.startDate, monthStore.endDate)
         .forEach((entry) => {
           void rosterStore.addRosterEntry({
             ...entry,
