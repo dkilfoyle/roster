@@ -41,6 +41,14 @@ export interface ActivityDefinition {
   perMonth?: number;
 }
 
+export interface ActivityCellDefinition {
+  date: Date;
+  time: Time;
+  activityName: string;
+  capableSMOs: Array<string>;
+  availableSMOs: Array<string>;
+}
+
 export interface SMOActivitySummary {
   name: string;
   Call: number;

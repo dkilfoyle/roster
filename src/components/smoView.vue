@@ -105,7 +105,7 @@
             :smoName="smo.name"
             :isSelected="isSelected(date, i % 2 ? 'PM' : 'AM', smo.name)"
             :selectedActivity="activityButton || ''"
-            @onSelectCell="onSelectCell"
+            @selectCell="onSelectCell"
           ></smo-cell>
         </tr>
       </transition-group>

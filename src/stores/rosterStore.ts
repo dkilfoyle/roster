@@ -87,6 +87,23 @@ export const useRosterStore = defineStore('roster', {
         }) || Array<RosterEntry>()
       );
     },
+
+    exists(searchCriteria: SearchRosterEntry, curMonth = true) {
+      const searchEntries = curMonth ? this.monthEntries : this.allEntries;
+      return searchEntries.some((entry) => {
+        if (
+          (searchCriteria.version && entry.version != searchCriteria.version) ||
+          (searchCriteria.time && entry.time != searchCriteria.time) ||
+          (searchCriteria.smo && entry.smo != searchCriteria.smo) ||
+          (searchCriteria.activity &&
+            entry.activity != searchCriteria.activity) ||
+          (searchCriteria.date && !isSameDay(entry.date, searchCriteria.date))
+        )
+          return false;
+        return true;
+      });
+    },
+
     async loadAllFromFirestore() {
       console.log('rosterStore.loadAllFromFirestore');
       const q = query(collection(getFirestore(), 'roster'));
@@ -109,7 +126,6 @@ export const useRosterStore = defineStore('roster', {
     },
 
     async loadFromFirestore(startDate: Date, endDate: Date) {
-      console.log('rosterStore.loadFromFirestore', startDate.toUTCString());
       const q = query(
         collection(getFirestore(), 'roster'),
         where('date', '>=', format(startDate, 'yyyy-MM-dd')),

@@ -1,5 +1,54 @@
 <template>
-  <td :class="tdClasses" @click.prevent="tdClick">
+  <td :class="tdClasses">
+    <q-menu style="min-height: 300px" v-model="smoPopup" v-if="!monthStore.isArchived">
+      <div class="row q-pa-md bg-info q-mb-sm">
+        <div class="col">{{ activityName }} on {{ dateStr }}</div>
+        <q-btn class="col-auto" icon="close" size="sm" @click="smoPopup = false"></q-btn>
+      </div>
+      <q-tabs v-model="cellTab" class="q-mt-md">
+        <q-tab name="assigned" label="Cur">
+          <q-badge
+            :color="assignedSMOs.length > 0 ? 'green' : 'red'"
+            floating
+          >{{ assignedSMOs.length }}</q-badge>
+        </q-tab>
+        <q-tab name="available" label="Avail">
+          <q-badge
+            :color="availableSMOs.length > 0 ? 'green' : 'red'"
+            floating
+          >{{ availableSMOs.length }}</q-badge>
+        </q-tab>
+        <q-tab name="unavailable" label="Unavail">
+          <q-badge color="red" floating>
+            {{
+              unavailableSMOs.length
+            }}
+          </q-badge>
+        </q-tab>
+        <q-tab name="others" label="Others">
+          <q-badge color="amber" floating>
+            {{
+              incapableSMOs.length
+            }}
+          </q-badge>
+        </q-tab>
+      </q-tabs>
+      <q-separator></q-separator>
+      <q-tab-panels v-model="cellTab" animated>
+        <q-tab-panel name="assigned">
+          <two-col-list :items="assignedSMOs" @clickItem="(i) => removeSMO(i)"></two-col-list>
+        </q-tab-panel>
+        <q-tab-panel name="available">
+          <two-col-list :items="availableSMOs" @clickItem="(i) => addSMO(availableSMOs[i])"></two-col-list>
+        </q-tab-panel>
+        <q-tab-panel name="unavailable">
+          <two-col-list :items="unavailableSMOs" @clickItem="(i) => addSMO(unavailableSMOs[i])"></two-col-list>
+        </q-tab-panel>
+        <q-tab-panel name="others">
+          <two-col-list :items="incapableSMOs" @clickItem="(i) => addSMO(incapableSMOs[i])"></two-col-list>
+        </q-tab-panel>
+      </q-tab-panels>
+    </q-menu>
     <q-tooltip v-if="tdHasTooltip">
       <div class="tdtooltip">
         <div class="col">{{ assignedSMOs.map((smo) => smo).join(', ') }}</div>
@@ -12,6 +61,7 @@
 
 <script lang="ts">
 import { defineComponent, toRefs, computed, PropType, ref } from 'vue';
+import twoColList from './twoColList.vue';
 import { useStore } from '../stores/store';
 import { isSunday, isFriday } from 'date-fns';
 import { Time } from '../stores/models';
@@ -19,7 +69,6 @@ import { useSMOStore } from 'src/stores/smoStore';
 import { useActivityStore } from 'src/stores/activityStore';
 import { useRosterStore } from 'src/stores/rosterStore';
 import { useMonthStore } from 'src/stores/monthStore';
-import { Notify } from 'quasar';
 
 export default defineComponent({
   // name: 'ComponentName'
@@ -37,23 +86,19 @@ export default defineComponent({
       type: String,
       required: true,
     },
-    isSelected: {
-      type: Boolean,
-      required: true
-    },
-    selectedSMO: {
-      type: String,
-      required: true
-    }
   },
-  setup(props, { emit }) {
+  components: { twoColList },
+  setup(props) {
     const store = useStore();
     const smoStore = useSMOStore();
     const rosterStore = useRosterStore();
+    const monthStore = useMonthStore();
     const activityStore = useActivityStore();
 
-    const { dateStr, time, activityName, isSelected, selectedSMO } = toRefs(props);
+    const { dateStr, time, activityName } = toRefs(props);
     const date = ref(new Date(dateStr.value));
+    const cellTab = ref('available');
+    const smoPopup = ref(false);
 
     const assignedEntries = computed(() =>
       rosterStore.filter({
@@ -63,33 +108,6 @@ export default defineComponent({
       })
     );
 
-    const assignedSMOs = computed(() =>
-      assignedEntries.value.map((entry) => entry.smo)
-    );
-
-    const capableSMOs = computed(() => {
-      return smoStore.getCapableSMOs(activityName.value)
-    });
-
-    const availableSMOs = computed(() => {
-      return smoStore.getAvailableSMOs(date.value, time.value, activityName.value).map((smo) => smo.name).sort(sortName)
-    })
-
-    const tdClick = () => {
-      if (selectedSMO.value == '') {
-        // no smo selected in button menu so add current cell to selection
-        emit('selectCell', { date: date.value, time: time.value, activityName, capableSMOs, availableSMOs })
-      } else if (selectedSMO.value == 'erase') {
-        // erase cell
-        // TODO: If > 1 entry present dialog to select which to delete
-        assignedEntries.value.forEach((entry) => void rosterStore.delRosterEntry(entry.id))
-      } else {
-        // set to selected SMO
-        // console.log('setting ', selectedActivity.value)
-        addSMO(selectedSMO.value)
-      }
-    }
-
     const sortName = (a: string, b: string) => {
       const aname = a.substr(-1) + a.substr(0, a.length - 1);
       const bname = b.substr(-1) + b.substr(0, a.length - 1);
@@ -97,6 +115,10 @@ export default defineComponent({
       if (aname > bname) return 1;
       return 0;
     }
+
+    const assignedSMOs = computed(() =>
+      assignedEntries.value.map((entry) => entry.smo)
+    );
 
     const isValidSMOs = computed(() => {
       const reasons = Array<string>();
@@ -129,18 +151,52 @@ export default defineComponent({
         activityName.value
       )
     );
-
     const isHoliday = computed(() => store.isHoliday(date.value));
 
+    const availableSMOs = computed(() => {
+      return smoStore.smos
+        .filter((smo) =>
+          store.isAvailableSMO(
+            date.value,
+            time.value,
+            smo.name,
+            activityName.value
+          )
+        )
+        .map((smo) => smo.name)
+        .filter((smo) => !assignedSMOs.value.includes(smo))
+        .sort(sortName)
+    });
+
+    const unavailableSMOs = computed(() => {
+      return smoStore.smos
+        .filter((smo) =>
+          store.isUnavailableSMO(
+            date.value,
+            time.value,
+            smo.name,
+            activityName.value
+          )
+        )
+        .map((smo) => smo.name)
+        .sort(sortName);
+    });
+
+    const incapableSMOs = computed(() => {
+      return smoStore.smos
+        .filter(
+          (smo) => !smoStore.isAllowedActivitySMO(activityName.value, smo.name)
+        )
+        .map((smo) => smo.name)
+        .sort(sortName)
+    });
+
+    const removeSMO = (entryNum: number) => {
+      const rosterStore = useRosterStore();
+      void rosterStore.delRosterEntry(assignedEntries.value[entryNum].id);
+    };
+
     const addSMO = (smoName: string) => {
-      if (assignedSMOs.value.includes(smoName)) {
-        Notify.create({
-          message: 'Warning',
-          caption: `${smoName} already assigned on ${date.value.toDateString()} ${time.value} - skipping`,
-          position: 'bottom-right',
-        });
-        return;
-      }
       const rosterStore = useRosterStore();
       const monthStore = useMonthStore();
       void rosterStore.addRosterEntry({
@@ -151,6 +207,7 @@ export default defineComponent({
         version: monthStore.version,
         notes: '',
       });
+      smoPopup.value = false;
     };
 
     const tdContent = computed(() => {
@@ -175,7 +232,6 @@ export default defineComponent({
             ? isSunday(date.value)
             : isFriday(date.value),
           holiday: isHoliday.value,
-          selected: isSelected.value
         },
       ];
       if (!activityStore.viewOptions.showErrors || isHoliday.value)
@@ -201,13 +257,21 @@ export default defineComponent({
     });
 
     return {
+      cellTab,
+      smoPopup,
+      isValidActivity,
+      isAllowedActivity,
       assignedSMOs,
-      errors,
-
+      availableSMOs,
+      unavailableSMOs,
+      incapableSMOs,
       tdHasTooltip,
       tdContent,
       tdClasses,
-      tdClick
+      addSMO,
+      removeSMO,
+      monthStore,
+      errors
     };
   },
 });

@@ -79,7 +79,7 @@ export default defineComponent({
             position: 'bottom-right',
           });
         } else
-          emit('onSelectCell', { date: date.value, time: time.value, smoName: smoName.value, capableActivities, allowedActivities })
+          emit('selectCell', { date: date.value, time: time.value, smoName: smoName.value, capableActivities, allowedActivities })
       } else if (selectedActivity.value == 'erase') {
         // erase cell
         // TODO: If > 1 entry present dialog to select which to delete

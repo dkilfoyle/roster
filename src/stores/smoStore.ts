@@ -137,9 +137,21 @@ export const useSMOStore = defineStore('smo', {
       if (!smo) throw new Error(`Activity ${smoName} is not defined`);
       return smo;
     },
-    getAllowedSMOs(date: Date, activityName: string) {
+
+    getCapableSMOs(activityName: string) {
       return this.activeSMOs.filter((smo) => {
         return smo.activities.includes(activityName);
+      });
+    },
+
+    // smo is capable and is available at this date and time
+    getAvailableSMOs(date: Date, time: Time, activityName: string) {
+      return this.activeSMOs.filter((smo) => {
+        return (
+          smo.activities.includes(activityName) &&
+          smo.allowedDates &&
+          smo.allowedDates[time].some((smoDate) => isSameDay(smoDate, date))
+        );
       });
     },
 
@@ -149,6 +161,7 @@ export const useSMOStore = defineStore('smo', {
         throw new Error('allowed smo dates are not compiled');
       return smo.allowedDates[time].some((smoDate) => isSameDay(smoDate, date));
     },
+
     isAllowedActivitySMO(activityName: string, smoName: string): boolean {
       return this.getSMO(smoName).activities.includes(activityName);
     },
