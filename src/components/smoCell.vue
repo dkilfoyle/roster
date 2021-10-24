@@ -7,20 +7,21 @@
         <p v-for="entry in assignedEntries" :key="entry.id">{{ entry.notes }}</p>
       </div>
     </q-tooltip>
-    {{ tdContent }}
+    <div :id="cellID">{{ tdContent }}</div>
   </td>
 </template>
 
 <script lang="ts">
-import { defineComponent, toRefs, computed, PropType, ref } from 'vue';
+import { defineComponent, toRefs, computed, PropType, ref, watch } from 'vue';
 import { useStore } from '../stores/store';
 import { useSMOStore } from '../stores/smoStore';
-import { isSunday, isFriday } from 'date-fns';
+import { isSunday, isFriday, format } from 'date-fns';
 import { Time } from '../stores/models';
 import { useActivityStore } from 'src/stores/activityStore';
 import { useRosterStore } from 'src/stores/rosterStore';
 import { useMonthStore } from 'src/stores/monthStore';
 import { Notify } from 'quasar';
+import { gsap } from 'gsap'
 
 export default defineComponent({
   // name: 'ComponentName'
@@ -51,6 +52,8 @@ export default defineComponent({
     const { dateStr, time, smoName, isSelected, selectedActivity } = toRefs(props);
     const date = ref(new Date(dateStr.value));
 
+    const cellID = computed(() => `Cell${format(date.value, 'yyyy_MM_dd')}_${time.value}_${smoName.value}`);
+
     const store = useStore();
     const smoStore = useSMOStore();
     const activityStore = useActivityStore();
@@ -66,8 +69,6 @@ export default defineComponent({
     });
 
     const notesMenu = ref(false);
-    const isEditing = ref(false);
-
 
     const tdClick = () => {
       if (selectedActivity.value == '') {
@@ -98,11 +99,6 @@ export default defineComponent({
       );
     };
 
-    const removeActivity = (activityName: string) => {
-      const activity = assignedEntries.value.find((entry) => entry.activity == activityName);
-      if (activity) void rosterStore.delRosterEntry(activity.id);
-    };
-
     const setActivity = (activityName: string) => {
       // setActivity replaces only the first activity if there are multiple assigned activities
       if (assignedEntries.value.length) {
@@ -110,7 +106,6 @@ export default defineComponent({
           activity: activityName,
         });
       } else addActivity(activityName);
-
     };
 
     const addActivity = (activityName: string) => {
@@ -127,16 +122,6 @@ export default defineComponent({
 
     const isHoliday = computed(() => store.isHoliday(date.value));
 
-    const allActivities = computed(() => activityStore.activities.map((activity) => activity.name));
-
-    const allColors = computed(() => {
-      return activityStore.activities.map((activity) => {
-        if (availableActivities.value.includes(activity.name)) return 'black';
-        else if (unavailableActivities.value.includes(activity.name)) return 'orange';
-        else return 'red';
-      })
-    })
-
     const capableActivities = computed(
       () => smoStore.getSMO(smoName.value).activities
     );
@@ -145,28 +130,8 @@ export default defineComponent({
       assignedEntries.value.map((entry) => entry.activity)
     );
 
-    const capableActivitiesNotAssigned = computed(() =>
-      capableActivities.value.filter(
-        (activityName) => !assignedActivities.value.includes(activityName)
-      )
-    )
-
     const allowedActivities = computed(() =>
       capableActivities.value.filter((activityName) => activityStore.isAllowedActivity(date.value, time.value, activityName))
-    );
-
-    const availableActivities = computed(() =>
-      capableActivitiesNotAssigned.value.filter((activityName) => activityStore.isAllowedActivity(date.value, time.value, activityName))
-    );
-
-    const unavailableActivities = computed(() =>
-      capableActivitiesNotAssigned.value.filter((activityName) => !activityStore.isAllowedActivity(date.value, time.value, activityName))
-    );
-
-    const incapableActivities = computed(() =>
-      activityStore.activityNames.filter(
-        (activityName) => !capableActivities.value.includes(activityName)
-      )
     );
 
     const isValidSMO = computed(() =>
@@ -204,6 +169,10 @@ export default defineComponent({
       else return activities.length;
     });
 
+    watch(tdContent, (newVal) => {
+      gsap.from(`#${cellID.value}`, { duration: 1.5, y: -30, opacity: 0 });
+    })
+
     const tdHasNotes = computed(() => {
       return assignedEntries.value.some((entry) => entry.notes != '');
     });
@@ -229,7 +198,7 @@ export default defineComponent({
               assignedActivities.value[0]
             ),
           note: tdHasNotes.value,
-          selected: isSelected.value || isEditing.value,
+          selected: isSelected.value,
           availableAssigned: allowedActivities.value.includes(selectedActivity.value) && smoStore.isAllowedTimeSMO(date.value, time.value, smoName.value) && assignedEntries.value.length,
           availableUnassigned: allowedActivities.value.includes(selectedActivity.value) && smoStore.isAllowedTimeSMO(date.value, time.value, smoName.value) && assignedEntries.value.length == 0,
           isErasing: selectedActivity.value == 'erase',
@@ -276,29 +245,19 @@ export default defineComponent({
 
 
     return {
-      activityStore,
-      monthStore,
+      cellID,
       saveNotes,
       notesMenu,
-      addActivity,
-      removeActivity,
-      setActivity,
-      assignedEntries,
-      availableActivities,
-      unavailableActivities,
-      incapableActivities,
-      isValidSMO,
+
       assignedActivities,
-      capableActivities,
+      assignedEntries,
+
       tdHasTooltip,
       tdContent,
       tdClasses,
-      date,
+
       errors,
       tdClick,
-      allActivities,
-      allColors,
-      isEditing
     };
   },
 });

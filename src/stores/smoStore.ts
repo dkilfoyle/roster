@@ -238,16 +238,17 @@ export const useSMOStore = defineStore('smo', {
     getCRSEntries(startDate: Date, endDate: Date) {
       const entries = Array<RosterData>();
       this.activeSMOs.forEach((smo) => {
-        parseRRule('every Thursday', startDate, endDate).forEach((date) =>
-          entries.push({
-            date,
-            time: 'PM',
-            smo: smo.name,
-            activity: 'CRS',
-            notes: '',
-            version: '',
-          })
-        );
+        if (smo.activities.includes('CRS'))
+          parseRRule('every Thursday', startDate, endDate).forEach((date) =>
+            entries.push({
+              date,
+              time: 'PM',
+              smo: smo.name,
+              activity: 'CRS',
+              notes: '',
+              version: '',
+            })
+          );
       });
       return entries;
     },

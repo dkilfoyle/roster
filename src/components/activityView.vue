@@ -97,6 +97,7 @@
                       label="Procedures"
                       size="sm"
                     />
+                    <q-checkbox v-model="activityStore.viewOptions.showNCT" label="NCT" size="sm" />
                     <q-checkbox
                       v-model="activityStore.viewOptions.showOther"
                       label="Other"
@@ -176,8 +177,13 @@ export default defineComponent({
     }
 
     const onSelectCell = (e: ActivityCellDefinition) => {
-      const index = selectedCells.findIndex((cell) => isSameDay(e.date, cell.date) && cell.time == e.time && cell.activityName == e.activityName);
-      console.log('selectCell: ', e)
+      const index = selectedCells.findIndex((cell) => {
+        const sameDay = isSameDay(e.date, cell.date);
+        const sameTime = e.time == cell.time;
+        const sameActivity = cell.activityName == e.activityName;
+        return sameDay && sameTime && sameActivity;
+      });
+
       if (index == -1)
         selectedCells.push(e);
       else selectedCells.splice(index)
@@ -235,7 +241,7 @@ export default defineComponent({
         } else {
           // add this SMO to each selected cell
           selectedCells.forEach((cell) => {
-            if (rosterStore.exists({ date: cell.date, time: cell.time, smo: value, version: monthStore.version })) {
+            if (rosterStore.exists({ date: cell.date, time: cell.time, smo: value, activity: cell.activityName, version: monthStore.version })) {
               Notify.create({
                 message: 'Warning',
                 caption: `${value} is already assigned to ${cell.date.toDateString()} ${cell.time}`,
@@ -251,7 +257,9 @@ export default defineComponent({
                 version: monthStore.version,
               });
             };
-          })
+          });
+          clearSelection();
+          smoButton.value = '';
         }
       }
     };

@@ -114,7 +114,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, reactive, computed } from 'vue';
+import { defineComponent, ref, reactive, computed, nextTick } from 'vue';
 import { useStore } from '../stores/store';
 import { useSMOStore } from 'src/stores/smoStore';
 import { useMonthStore } from 'src/stores/monthStore';
@@ -179,7 +179,7 @@ export default defineComponent({
         if (value == 'erase') {
           if (selectedCells.length > 1) confirmEraseSelectedDialog.value = true; else doEraseSelected();
         } else {
-          setSelectedCellsToActivity(value);
+          void setSelectedCellsToActivity(value);
         }
       }
     };
@@ -195,7 +195,7 @@ export default defineComponent({
       activityButton.value = '';
       clearSelection();
     }
-    const setSelectedCellsToActivity = (activityName: string) => {
+    const setSelectedCellsToActivity = async (activityName: string) => {
       selectedCells.forEach((cell) => {
         const cellEntries = rosterStore.filter({
           date: cell.date,
@@ -221,6 +221,8 @@ export default defineComponent({
         }
       });
       clearSelection();
+      await nextTick();
+      activityButton.value = '';
     }
 
     const showSMOFilterMenu = ref(false);

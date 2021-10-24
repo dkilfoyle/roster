@@ -53,10 +53,13 @@ export const useRosterStore = defineStore('roster', {
             entry.date >= monthStore.startDate &&
             entry.date <= monthStore.endDate
         )
-        .reduce((versions, entry) => {
-          if (!versions.includes(entry.version)) versions.push(entry.version);
-          return versions;
-        }, Array<string>());
+        .reduce(
+          (versions, entry) => {
+            if (!versions.includes(entry.version)) versions.push(entry.version);
+            return versions;
+          },
+          ['Final']
+        );
     },
   },
   actions: {

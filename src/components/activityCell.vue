@@ -78,7 +78,7 @@ export default defineComponent({
     const tdClick = () => {
       if (selectedSMO.value == '') {
         // no smo selected in button menu so add current cell to selection
-        emit('selectCell', { date: date.value, time: time.value, activityName, capableSMOs, availableSMOs })
+        emit('selectCell', { date: date.value, time: time.value, activityName: activityName.value, capableSMOs, availableSMOs })
       } else if (selectedSMO.value == 'erase') {
         // erase cell
         // TODO: If > 1 entry present dialog to select which to delete
