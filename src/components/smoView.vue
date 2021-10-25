@@ -51,7 +51,7 @@
               <q-icon name="clear" color="white"></q-icon>
             </q-badge>
           </th>
-          <th></th>
+          <th>{{ keyword }}</th>
           <th v-for="date in monthStore.dates" :key="date.toDateString()">{{ format(date, 'dd') }}</th>
         </tr>
         <tr class="pm-row">
@@ -114,7 +114,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, reactive, computed, nextTick } from 'vue';
+import { defineComponent, ref, reactive, computed, nextTick, onUnmounted } from 'vue';
 import { useStore } from '../stores/store';
 import { useSMOStore } from 'src/stores/smoStore';
 import { useMonthStore } from 'src/stores/monthStore';
@@ -124,6 +124,7 @@ import smoCell from './smoCell.vue';
 import { format, isSameDay } from 'date-fns';
 import { ActivityDefinition, SMOCellDefinition, Time } from 'src/stores/models';
 import { useRosterStore } from 'src/stores/rosterStore';
+import { gsap } from 'gsap';
 
 export default defineComponent({
   // name: 'ComponentName'
@@ -143,8 +144,8 @@ export default defineComponent({
       label?: string
     };
 
-    const getPage1Activities = () => activityStore.activities.filter((activity) => activity.name != 'Call' && activity.type && !['Leave', 'NCT'].includes(activity.type));
-    const getPage2Activities = () => activityStore.activities.filter((activity) => activity.name != 'Call' && activity.type && ['Leave', 'NCT'].includes(activity.type));
+    const getPage1Activities = () => activityStore.activities.filter((activity) => activity.name != 'Call' && activity.type && !['Leave', 'NCT', 'Outreach'].includes(activity.type));
+    const getPage2Activities = () => activityStore.activities.filter((activity) => activity.name != 'Call' && activity.type && ['Leave', 'NCT', 'Outreach'].includes(activity.type));
 
     const getActivityButtons = (activities: Array<ActivityDefinition>) => {
 
@@ -174,7 +175,6 @@ export default defineComponent({
     const activityButtons2 = computed(() => getActivityButtons(getPage2Activities()));
 
     const clickActivityButton = (value: string) => {
-      console.log('clicked ', value, selectedCells.length, value && selectedCells.length)
       if (value && selectedCells.length) {
         if (value == 'erase') {
           if (selectedCells.length > 1) confirmEraseSelectedDialog.value = true; else doEraseSelected();
@@ -185,6 +185,7 @@ export default defineComponent({
     };
     const confirmEraseSelectedDialog = ref(false);
     const doEraseSelected = () => {
+      activityButton.value = '';
       selectedCells.forEach((cell) => {
         rosterStore.filter({
           date: cell.date,
@@ -192,7 +193,6 @@ export default defineComponent({
           smo: cell.smoName,
         }).filter(entry => entry.activity != 'Call').forEach((entry) => void rosterStore.delRosterEntry(entry.id));
       });
-      activityButton.value = '';
       clearSelection();
     }
     const setSelectedCellsToActivity = async (activityName: string) => {
@@ -219,6 +219,7 @@ export default defineComponent({
             version: monthStore.version,
           });
         }
+        gsap.from(`#${cell.id}`, { duration: 1.0, background: 'red' }); //y: -30, opacity: 0 });
       });
       clearSelection();
       await nextTick();
@@ -233,7 +234,6 @@ export default defineComponent({
     }
     const onSelectCell = (e: SMOCellDefinition) => {
       const index = selectedCells.findIndex((cell) => isSameDay(e.date, cell.date) && cell.time == e.time && cell.smoName == e.smoName);
-      console.log('selectCell: ', e)
       if (index == -1)
         selectedCells.push(e);
       else selectedCells.splice(index)
@@ -242,7 +242,32 @@ export default defineComponent({
       selectedCells.splice(0, selectedCells.length);
     }
 
-
+    const capsActivities = activityStore.activityNames.reduce((res, cur) => { res[cur.toUpperCase()] = cur; return res; }, {} as Record<string, string>);
+    const keyword = ref('');
+    const onKeydown = (e: KeyboardEvent) => {
+      if (selectedCells.length == 0) return;
+      if (e.key == 'Escape' || e.key == 'Esc') keyword.value = ''; else {
+        if (e.keyCode >= 65 && e.keyCode <= 90) keyword.value = keyword.value + e.key.toUpperCase();
+      }
+      if (e.key == 'Space' || e.key == 'Enter') {
+        // match to current length only
+        if (Object.keys(capsActivities).includes(keyword.value)) {
+          void setSelectedCellsToActivity(capsActivities[keyword.value])
+          keyword.value = '';
+        }
+      } else {
+        // match full length
+        if (Object.keys(capsActivities).filter(x => x.startsWith(keyword.value)).length == 1 && Object.keys(capsActivities).includes(keyword.value
+        )) {
+          void setSelectedCellsToActivity(capsActivities[keyword.value])
+          keyword.value = '';
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeydown);
+    onUnmounted(() => {
+      window.removeEventListener('keydown', onKeydown)
+    })
 
     return {
       store,
@@ -257,6 +282,8 @@ export default defineComponent({
 
       confirmEraseSelectedDialog,
       doEraseSelected,
+
+      keyword,
 
       format,
       showSMOFilterMenu,

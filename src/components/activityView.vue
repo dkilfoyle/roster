@@ -146,7 +146,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, reactive } from 'vue';
+import { defineComponent, ref, computed, reactive, onUnmounted } from 'vue';
 import { useStore } from '../stores/store';
 import { useActivityStore } from '../stores/activityStore';
 import { useMonthStore } from '../stores/monthStore';
@@ -157,6 +157,7 @@ import activityCell from './activityCell.vue';
 import { format, isSameDay } from 'date-fns';
 import { ActivityCellDefinition, SMODefinition, Time } from 'src/stores/models';
 import { Notify } from 'quasar';
+import { gsap } from 'gsap'
 
 export default defineComponent({
   // name: 'ComponentName'
@@ -239,30 +240,36 @@ export default defineComponent({
         if (value == 'erase') {
           if (selectedCells.length > 1) confirmEraseSelectedDialog.value = true; else doEraseSelected();
         } else {
-          // add this SMO to each selected cell
-          selectedCells.forEach((cell) => {
-            if (rosterStore.exists({ date: cell.date, time: cell.time, smo: value, activity: cell.activityName, version: monthStore.version })) {
-              Notify.create({
-                message: 'Warning',
-                caption: `${value} is already assigned to ${cell.date.toDateString()} ${cell.time}`,
-                position: 'bottom-right',
-              });
-            } else {
-              void rosterStore.addRosterEntry({
-                date: cell.date,
-                time: cell.time,
-                smo: value,
-                activity: cell.activityName,
-                notes: '',
-                version: monthStore.version,
-              });
-            };
-          });
-          clearSelection();
-          smoButton.value = '';
+          setSelectedCellsToSMO(value);
         }
       }
     };
+
+    const setSelectedCellsToSMO = (smoName: string) => {
+      // add this SMO to each selected cell
+      selectedCells.forEach((cell) => {
+        if (rosterStore.exists({ date: cell.date, time: cell.time, smo: smoName, activity: cell.activityName, version: monthStore.version })) {
+          Notify.create({
+            message: 'Warning',
+            caption: `${smoName} is already assigned to ${cell.date.toDateString()} ${cell.time}`,
+            position: 'bottom-right',
+          });
+        } else {
+          void rosterStore.addRosterEntry({
+            date: cell.date,
+            time: cell.time,
+            smo: smoName,
+            activity: cell.activityName,
+            notes: '',
+            version: monthStore.version,
+          });
+        };
+        gsap.from(`#${cell.id}`, { duration: 1.0, background: 'red' });
+      });
+      clearSelection();
+      smoButton.value = '';
+    }
+
     const confirmEraseSelectedDialog = ref(false);
     const doEraseSelected = () => {
       selectedCells.forEach((cell) => {
@@ -271,6 +278,7 @@ export default defineComponent({
           time: cell.time,
           activity: cell.activityName,
         }).forEach((entry) => void rosterStore.delRosterEntry(entry.id));
+        gsap.from(`#${cell.id}`, { duration: 1.0, background: 'red' });
       });
       smoButton.value = '';
       clearSelection();
@@ -298,6 +306,33 @@ export default defineComponent({
           activity.perMonth
         );
     };
+
+    const capsSMOs = smoStore.activeSMOs.reduce((res, cur) => { res[cur.name.toUpperCase()] = cur.name; return res; }, {} as Record<string, string>);
+    const keyword = ref('');
+    const onKeydown = (e: KeyboardEvent) => {
+      if (selectedCells.length == 0) return;
+      if (e.key == 'Escape' || e.key == 'Esc') keyword.value = ''; else {
+        if (e.keyCode >= 65 && e.keyCode <= 90) keyword.value = keyword.value + e.key.toUpperCase();
+      }
+      if (e.key == 'Space' || e.key == 'Enter') {
+        // match to current length only
+        if (Object.keys(capsSMOs).includes(keyword.value)) {
+          void setSelectedCellsToSMO(capsSMOs[keyword.value])
+          keyword.value = '';
+        }
+      } else {
+        // match full length
+        if (Object.keys(capsSMOs).filter(x => x.startsWith(keyword.value)).length == 1 && Object.keys(capsSMOs).includes(keyword.value
+        )) {
+          void setSelectedCellsToSMO(capsSMOs[keyword.value])
+          keyword.value = '';
+        }
+      }
+    };
+    window.addEventListener('keydown', onKeydown);
+    onUnmounted(() => {
+      window.removeEventListener('keydown', onKeydown)
+    })
 
     return {
 

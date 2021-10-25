@@ -6,20 +6,21 @@
         <div class="col" v-for="(reason, i) in errors" :key="i">{{ reason }}</div>
       </div>
     </q-tooltip>
-    {{ tdContent }}
+    <div :id="cellID">{{ tdContent }}</div>
   </td>
 </template>
 
 <script lang="ts">
 import { defineComponent, toRefs, computed, PropType, ref } from 'vue';
 import { useStore } from '../stores/store';
-import { isSunday, isFriday } from 'date-fns';
+import { isSunday, isFriday, format } from 'date-fns';
 import { Time } from '../stores/models';
 import { useSMOStore } from 'src/stores/smoStore';
 import { useActivityStore } from 'src/stores/activityStore';
 import { useRosterStore } from 'src/stores/rosterStore';
 import { useMonthStore } from 'src/stores/monthStore';
 import { Notify } from 'quasar';
+import { gsap } from 'gsap'
 
 export default defineComponent({
   // name: 'ComponentName'
@@ -55,6 +56,8 @@ export default defineComponent({
     const { dateStr, time, activityName, isSelected, selectedSMO } = toRefs(props);
     const date = ref(new Date(dateStr.value));
 
+    const cellID = computed(() => `ActCell${format(date.value, 'yyyy_MM_dd')}_${time.value}_${activityName.value}`);
+
     const assignedEntries = computed(() =>
       rosterStore.filter({
         date: date.value,
@@ -78,15 +81,17 @@ export default defineComponent({
     const tdClick = () => {
       if (selectedSMO.value == '') {
         // no smo selected in button menu so add current cell to selection
-        emit('selectCell', { date: date.value, time: time.value, activityName: activityName.value, capableSMOs, availableSMOs })
+        emit('selectCell', { date: date.value, time: time.value, activityName: activityName.value, capableSMOs, availableSMOs, id: cellID })
       } else if (selectedSMO.value == 'erase') {
         // erase cell
         // TODO: If > 1 entry present dialog to select which to delete
         assignedEntries.value.forEach((entry) => void rosterStore.delRosterEntry(entry.id))
+        gsap.from(`#${cellID.value}`, { duration: 1.0, background: 'red' });
       } else {
         // set to selected SMO
         // console.log('setting ', selectedActivity.value)
         addSMO(selectedSMO.value)
+        gsap.from(`#${cellID.value}`, { duration: 1.0, background: 'red' });
       }
     }
 
@@ -201,6 +206,7 @@ export default defineComponent({
     });
 
     return {
+      cellID,
       assignedSMOs,
       errors,
 

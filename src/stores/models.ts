@@ -47,6 +47,7 @@ export interface ActivityCellDefinition {
   activityName: string;
   capableSMOs: Array<string>;
   availableSMOs: Array<string>;
+  id: string;
 }
 
 export interface SMOActivitySummary {
@@ -105,4 +106,5 @@ export interface SMOCellDefinition {
   date: Date;
   capableActivities: Array<string>;
   allowedActivities: Array<string>;
+  id: string;
 }

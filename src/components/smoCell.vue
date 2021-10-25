@@ -1,5 +1,27 @@
 <template>
   <td :class="tdClasses" @click.prevent="tdClick()" @contextmenu.prevent="notesMenu = !notesMenu">
+    <q-menu v-if="!monthStore.isArchived" v-model="notesMenu" no-parent-event>
+      <q-card style="min-width: 350px">
+        <q-card-section>
+          <div class="text-h8">Notes for {{ smoName }} on {{ dateStr }}</div>
+        </q-card-section>
+
+        <q-card-section v-for="entry in assignedEntries" :key="entry.id" class="q-pt-none">
+          <q-input
+            dense
+            v-model="entry.notes"
+            autofocus
+            @keyup.enter="saveNotes"
+            :label="entry.activity"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right" class="text-primary">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn flat label="Save" @click="saveNotes" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-menu>
     <q-tooltip v-if="tdHasTooltip">
       <div class="tdtooltip">
         {{ assignedActivities.map((smo) => smo).join(', ') }}
@@ -12,7 +34,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, toRefs, computed, PropType, ref, watch } from 'vue';
+import { defineComponent, toRefs, computed, PropType, ref } from 'vue';
 import { useStore } from '../stores/store';
 import { useSMOStore } from '../stores/smoStore';
 import { isSunday, isFriday, format } from 'date-fns';
@@ -52,7 +74,7 @@ export default defineComponent({
     const { dateStr, time, smoName, isSelected, selectedActivity } = toRefs(props);
     const date = ref(new Date(dateStr.value));
 
-    const cellID = computed(() => `Cell${format(date.value, 'yyyy_MM_dd')}_${time.value}_${smoName.value}`);
+    const cellID = computed(() => `SmoCell${format(date.value, 'yyyy_MM_dd')}_${time.value}_${smoName.value}`);
 
     const store = useStore();
     const smoStore = useSMOStore();
@@ -68,7 +90,6 @@ export default defineComponent({
       }).filter(entry => entry.activity != 'Call');
     });
 
-    const notesMenu = ref(false);
 
     const tdClick = () => {
       if (selectedActivity.value == '') {
@@ -80,18 +101,21 @@ export default defineComponent({
             position: 'bottom-right',
           });
         } else
-          emit('selectCell', { date: date.value, time: time.value, smoName: smoName.value, capableActivities, allowedActivities })
+          emit('selectCell', { date: date.value, time: time.value, smoName: smoName.value, capableActivities, allowedActivities, id: cellID.value })
       } else if (selectedActivity.value == 'erase') {
         // erase cell
         // TODO: If > 1 entry present dialog to select which to delete
         assignedEntries.value.forEach((entry) => void rosterStore.delRosterEntry(entry.id))
+        gsap.from(`#${cellID.value}`, { duration: 1.0, background: 'red' }); //y: -30, opacity: 0 });
       } else {
         // set to selected activity
         // console.log('setting ', selectedActivity.value)
         setActivity(selectedActivity.value)
+        gsap.from(`#${cellID.value}`, { duration: 1.0, background: 'yellow' }); //y: -30, opacity: 0 });
       }
     }
 
+    const notesMenu = ref(false);
     const saveNotes = () => {
       assignedEntries.value.forEach(
         (entry) =>
@@ -106,6 +130,7 @@ export default defineComponent({
           activity: activityName,
         });
       } else addActivity(activityName);
+
     };
 
     const addActivity = (activityName: string) => {
@@ -169,9 +194,7 @@ export default defineComponent({
       else return activities.length;
     });
 
-    watch(tdContent, (newVal) => {
-      gsap.from(`#${cellID.value}`, { duration: 1.5, y: -30, opacity: 0 });
-    })
+
 
     const tdHasNotes = computed(() => {
       return assignedEntries.value.some((entry) => entry.notes != '');
@@ -258,6 +281,8 @@ export default defineComponent({
 
       errors,
       tdClick,
+
+      monthStore
     };
   },
 });
