@@ -5,6 +5,11 @@ import {
   SetRosterEntry,
   SearchRosterEntry,
   RosterLookup,
+  Time,
+  CostMonth,
+  CostEntry,
+  CostSession,
+  CostDate,
 } from './models';
 
 import {
@@ -22,6 +27,10 @@ import { format } from 'date-fns';
 import { isSameDay, getEntryTimestamp } from './utils';
 // import { rosterData } from './data/rosterData';
 import { useMonthStore } from './monthStore';
+import { useActivityStore } from './activityStore';
+import { useStore } from './store';
+import { useSMOStore } from './smoStore';
+import { SSL_OP_NO_TLSv1_1 } from 'constants';
 
 export const useRosterStore = defineStore('roster', {
   state: () => ({
@@ -223,6 +232,310 @@ export const useRosterStore = defineStore('roster', {
           return await deleteDoc(doc(getFirestore(), 'roster', id));
         })
       );
+    },
+
+    anneal() {
+      const activityStore = useActivityStore();
+      const monthStore = useMonthStore();
+      const smoStore = useSMOStore();
+      const store = useStore();
+
+      // build list of shufflable activities
+      const shufflableActivities = activityStore.activities
+        .filter(
+          (activity) =>
+            activity.type != 'Leave' &&
+            activity.name != 'Neuro' &&
+            activity.name != 'Stroke' &&
+            activity.name != 'CRS'
+        )
+        .map((x) => x.name);
+
+      const sol: CostMonth = { cost: 0, oldcost: 0, dates: {} };
+
+      // build initial solution
+      // fill sol with appropriate dates,times,smos excluding any unchangeable sessions such as leave/ward with random activity
+      monthStore.dates.forEach((date) => {
+        if (store.isHoliday(date)) return;
+        smoStore.activeSMOs.forEach((smo) => {
+          (['AM', 'PM'] as Array<Time>).forEach((time) => {
+            // exclude session if already assigned to Leave or Ward
+            if (
+              this.getRosterAtTime(date, time).some((entry) => {
+                return (
+                  entry.smo == smo.name &&
+                  shufflableActivities.includes(entry.activity) == false
+                );
+              })
+            )
+              return;
+
+            // choose a random (?allowable) activity
+            const entry = {
+              date,
+              time,
+              smo: smo.name,
+              activity:
+                shufflableActivities[
+                  Math.random() * shufflableActivities.length
+                ],
+              version: 'anneal',
+              cost: 0,
+              oldcost: 0,
+            };
+
+            const dateStr = 'D' + format(date, 'yyyyMMdd');
+
+            entry.cost = getEntryCost(entry);
+            if (!sol.dates[dateStr])
+              sol.dates[dateStr] = {
+                cost: 0,
+                oldcost: 0,
+                date,
+              };
+            const solDate = sol.dates[dateStr];
+            if (!solDate[time])
+              solDate[time] = {
+                date,
+                time,
+                cost: 0,
+                oldcost: 0,
+                entries: [entry],
+              };
+            const solSession = solDate[time];
+            if (solSession) solSession.entries.push(entry);
+          });
+        });
+      });
+
+      this.getCost(sol);
+      let T = 1.0;
+      const T_min = 0.00001;
+      const alpha = 0.9;
+      while (T > T_min) {
+        let i = 1;
+        while (i <= 100) {
+          const {
+            day: day1,
+            session: session1,
+            entry: entry1,
+          } = this.getRandomEntry(sol);
+          const {
+            day: day2,
+            session: session2,
+            entry: entry2,
+          } = this.getRandomEntry(sol);
+
+          this.swap(sol, day1, session1, entry1, day2, session2, entry2);
+
+          const ap = this.acceptance_probability(sol.oldcost, sol.cost, T);
+          if (ap <= Math.random()) {
+            // reject swap, revert to pre swap
+            this.swap(sol, day1, session1, entry1, day2, session2, entry2);
+          }
+          i += 1;
+        }
+        T = T * alpha;
+      }
+      return sol;
+    },
+
+    getRandomEntry(sol: CostMonth) {
+      let i = 0;
+      while (i < 100) {
+        const date = Object.keys(sol.dates)[
+          Math.random() * (Object.keys(sol.dates).length - 1)
+        ];
+        const times = ['AM', 'PM'] as Array<Time>;
+        const time = times[Math.random()];
+
+        const day = sol.dates[date];
+        if (day) {
+          const session = day[time];
+          if (session) {
+            return {
+              day,
+              session,
+              entry:
+                session.entries[Math.random() * (session.entries.length - 1)],
+            };
+          }
+        }
+        i++;
+      }
+      throw new Error('Unable to find random entry');
+    },
+
+    swap(
+      sol: CostMonth,
+      day1: CostDate,
+      session1: CostSession,
+      entry1: CostEntry,
+      day2: CostDate,
+      session2: CostSession,
+      entry2: CostEntry
+    ) {
+      // swap activity
+      const entry1activity = entry1.activity;
+      entry1.activity = entry2.activity;
+      entry2.activity = entry1activity;
+
+      const entry1deltacost = -1 * (entry1.cost - getEntryCost(entry1));
+      const entry2deltacost = -1 * (entry2.cost - getEntryCost(entry2));
+
+      const session1deltacost = -1 * (session1.cost - getSessionCost(session1));
+      const session2deltacost = -1 * (session2.cost - getSessionCost(session2));
+
+      const day1deltacost = -1 * (day1.cost - getDayCost(day1));
+      const day2deltacost = -1 * (day2.cost - getDayCost(day2));
+
+      sol.oldcost = sol.cost;
+      sol.cost +=
+        entry1deltacost +
+        entry2deltacost +
+        session1deltacost +
+        session2deltacost +
+        day1deltacost +
+        day2deltacost;
+    },
+
+    unswap(
+      sol: CostMonth,
+      day1: CostDate,
+      session1: CostSession,
+      entry1: CostEntry,
+      day2: CostDate,
+      session2: CostSession,
+      entry2: CostEntry
+    ) {
+      sol.cost = sol.oldcost;
+      day1.cost = day1.oldcost;
+      day2.cost = day2.oldcost;
+      session1.cost = session1.oldcost;
+      session2.cost = session2.oldcost;
+      entry1.cost = entry1.oldcost;
+      entry2.cost = entry2.oldcost;
+      const entry1oldactivity = entry1.activity;
+      entry1.activity = entry2.activity;
+      entry2.activity = entry1oldactivity;
+    },
+
+    acceptance_probability(old_cost: number, new_cost: number, T: number) {
+      return 0;
+    },
+
+    getCost(sol: CostMonth) {
+      let entriesCost = 0;
+      let sessionsCost = 0;
+      Object.keys(sol).forEach((date) => {
+        Object.keys(sol[date]).forEach((time) => {
+          // sum cost of each entry
+          entriesCost += sol[date][time].reduce(
+            (accum, entry) => accum + getEntryCost(entry),
+            0
+          );
+
+          // sum cost of each session
+          sessionsCost += getSessionCost(sol, date, time);
+        });
+      });
+      return 0;
+    },
+
+    getEntryCost(entry: CostEntry) {
+      const smoStore = useSMOStore();
+      const activityStore = useActivityStore();
+      let cost = 0;
+
+      // smo is not capable of this activity
+      if (
+        smoStore.getSMO(entry.smo).activities.includes(entry.activity) == false
+      )
+        cost += 10;
+
+      // activity is not rosterable at this time
+      if (
+        activityStore.isAllowedActivity(
+          entry.date,
+          entry.time,
+          entry.activity
+        ) == false
+      )
+        cost += 7;
+
+      // smo is not rosterable at this time
+      if (smoStore.isAllowedTimeSMO(entry.date, entry.time, entry.smo) == false)
+        cost += 5;
+
+      entry.oldcost = entry.cost;
+      entry.cost = cost;
+      return cost;
+    },
+
+    getSessionCost(session: CostSession) {
+      const activityStore = useActivityStore();
+      let cost = 0;
+
+      const activityCount: Record<string, number> = {};
+      session.entries.forEach((entry) => {
+        if (!activityCount[entry.activity]) activityCount[entry.activity] = 1;
+        else activityCount[entry.activity] = activityCount[entry.activity] + 1;
+      });
+
+      Object.keys(activityCount).forEach((activityName) => {
+        const activity = activityStore.getActivity(activityName);
+        if (activity && activity.perSession) {
+          const rule = activity.perSession;
+          if (Array.isArray(rule)) {
+            if (activityCount[activityName] < rule[0])
+              cost = cost + (activityName == 'DSR' ? 3 : 1);
+            if (activityCount[activityName] > rule[1]) cost = cost + 1;
+          } else {
+            if (activityCount[activityName] != rule) cost = cost + 3;
+          }
+        }
+      });
+
+      session.oldcost = session.cost;
+      session.cost = cost;
+      return cost;
+    },
+
+    getDayCost(day: CostDate) {
+      const activityStore = useActivityStore();
+      let cost = 0;
+
+      const activityCount: Record<string, number> = {};
+      const addActivity = (entry: CostEntry) => {
+        if (!activityCount[entry.activity]) activityCount[entry.activity] = 1;
+        else activityCount[entry.activity] = activityCount[entry.activity] + 1;
+      };
+
+      if (day.AM) day.AM.entries.forEach(addActivity);
+      if (day.PM) day.PM.entries.forEach(addActivity);
+
+      Object.keys(activityCount).forEach((activityName) => {
+        const activity = activityStore.getActivity(activityName);
+        if (activity && activity.perDay) {
+          const rule = activity.perDay;
+          if (Array.isArray(rule)) {
+            if (activityCount[activityName] < rule[0]) cost = cost + 1;
+            if (activityCount[activityName] > rule[1]) cost = cost + 1;
+          } else {
+            if (activityCount[activityName] != rule) cost = cost + 3;
+          }
+        }
+      });
+
+      day.oldcost = day.cost;
+      day.cost = cost;
+      return cost;
+    },
+
+    getWeekCost(sol) {
+      // not enough EEG
+      // not enough EMG
+      return 0;
     },
   },
 });

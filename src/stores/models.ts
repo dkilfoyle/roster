@@ -108,3 +108,35 @@ export interface SMOCellDefinition {
   allowedActivities: Array<string>;
   id: string;
 }
+
+export interface CostEntry {
+  date: Date;
+  time: Time;
+  smo: string;
+  activity: string;
+  version: string;
+  cost: number;
+  oldcost: number;
+}
+
+export interface CostSession {
+  cost: number;
+  oldcost: number;
+  entries: Array<CostEntry>;
+  date: Date;
+  time: Time;
+}
+
+export interface CostDate {
+  cost: number;
+  oldcost: number;
+  AM?: CostSession;
+  PM?: CostSession;
+  date: Date;
+}
+
+export type CostMonth = {
+  cost: number;
+  oldcost: number;
+  dates: Record<string, CostDate>;
+};
