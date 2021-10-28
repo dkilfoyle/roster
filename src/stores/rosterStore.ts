@@ -10,6 +10,8 @@ import {
   CostEntry,
   CostSession,
   CostDate,
+  CostWeek,
+  Cost,
 } from './models';
 
 import {
@@ -23,14 +25,22 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 
-import { format } from 'date-fns';
+import { format, getWeek } from 'date-fns';
 import { isSameDay, getEntryTimestamp } from './utils';
 // import { rosterData } from './data/rosterData';
 import { useMonthStore } from './monthStore';
 import { useActivityStore } from './activityStore';
 import { useStore } from './store';
 import { useSMOStore } from './smoStore';
-import { SSL_OP_NO_TLSv1_1 } from 'constants';
+
+function sumObjectsByKey(objs: Record<string, number>[]) {
+  return objs.reduce((a, b) => {
+    for (const k in b) {
+      if (b.hasOwnProperty(k)) a[k] = (a[k] || 0) + b[k];
+    }
+    return a;
+  }, {});
+}
 
 export const useRosterStore = defineStore('roster', {
   state: () => ({
@@ -251,7 +261,7 @@ export const useRosterStore = defineStore('roster', {
         )
         .map((x) => x.name);
 
-      const sol: CostMonth = { cost: 0, oldcost: 0, dates: {} };
+      const sol: CostMonth = { cost: 0, oldcost: 0, weeks: {} };
 
       // build initial solution
       // fill sol with appropriate dates,times,smos excluding any unchangeable sessions such as leave/ward with random activity
@@ -276,118 +286,136 @@ export const useRosterStore = defineStore('roster', {
               time,
               smo: smo.name,
               activity:
-                shufflableActivities[
-                  Math.random() * shufflableActivities.length
-                ],
+                this.getRandomElement(shufflableActivities) ||
+                'UnknownActivity',
               version: 'anneal',
               cost: 0,
               oldcost: 0,
             };
 
             const dateStr = 'D' + format(date, 'yyyyMMdd');
+            const week = getWeek(date) - getWeek(monthStore.startDate);
+            const weekStr = 'W' + week.toString();
 
-            entry.cost = getEntryCost(entry);
-            if (!sol.dates[dateStr])
-              sol.dates[dateStr] = {
+            this.getEntryCost(entry);
+
+            if (!sol.weeks[weekStr])
+              sol.weeks[weekStr] = {
+                week,
                 cost: 0,
                 oldcost: 0,
-                date,
+                dates: {},
+                activityCount: this.getZeroActivityCount(),
               };
-            const solDate = sol.dates[dateStr];
-            if (!solDate[time])
-              solDate[time] = {
+            if (!sol.weeks[weekStr].dates[dateStr])
+              sol.weeks[weekStr].dates[dateStr] = {
+                date,
+                cost: 0,
+                oldcost: 0,
+                activityCount: this.getZeroActivityCount(),
+              };
+            if (!sol.weeks[weekStr].dates[dateStr][time])
+              sol.weeks[weekStr].dates[dateStr][time] = {
                 date,
                 time,
                 cost: 0,
                 oldcost: 0,
                 entries: [entry],
+                activityCount: this.getZeroActivityCount(),
               };
-            const solSession = solDate[time];
-            if (solSession) solSession.entries.push(entry);
+
+            const session = sol.weeks[weekStr].dates[dateStr][time];
+            if (!session) throw new Error('Missing session');
+            else session.entries.push(entry);
           });
         });
       });
 
       this.getCost(sol);
       let T = 1.0;
-      const T_min = 0.00001;
+      const T_min = 0.001;
       const alpha = 0.9;
       while (T > T_min) {
         let i = 1;
         while (i <= 100) {
-          const {
-            day: day1,
-            session: session1,
-            entry: entry1,
-          } = this.getRandomEntry(sol);
-          const {
-            day: day2,
-            session: session2,
-            entry: entry2,
-          } = this.getRandomEntry(sol);
+          const a = this.getRandomEntry(sol);
+          const b = this.getRandomEntry(sol);
 
-          this.swap(sol, day1, session1, entry1, day2, session2, entry2);
+          this.swap(sol, a, b);
 
           const ap = this.acceptance_probability(sol.oldcost, sol.cost, T);
           if (ap <= Math.random()) {
             // reject swap, revert to pre swap
-            this.swap(sol, day1, session1, entry1, day2, session2, entry2);
+            this.unswap(sol, a, b);
           }
           i += 1;
         }
+        console.log(T, sol.cost);
         T = T * alpha;
       }
       return sol;
     },
 
+    getZeroActivityCount() {
+      const activityStore = useActivityStore();
+      const activityCount: Record<string, number> = {};
+      activityStore.activityNames.forEach((activity) => {
+        activityCount[activity] = 0;
+      });
+      return activityCount;
+    },
+
+    getRandomElement<T>(arr: T[]) {
+      return arr.length
+        ? arr[Math.floor(Math.random() * arr.length)]
+        : undefined;
+    },
+
     getRandomEntry(sol: CostMonth) {
       let i = 0;
       while (i < 100) {
-        const date = Object.keys(sol.dates)[
-          Math.random() * (Object.keys(sol.dates).length - 1)
-        ];
-        const times = ['AM', 'PM'] as Array<Time>;
-        const time = times[Math.random()];
-
-        const day = sol.dates[date];
-        if (day) {
-          const session = day[time];
-          if (session) {
-            return {
-              day,
-              session,
-              entry:
-                session.entries[Math.random() * (session.entries.length - 1)],
-            };
-          }
-        }
         i++;
+
+        const week = this.getRandomElement(Object.values(sol.weeks));
+        if (!week) continue;
+        const day = this.getRandomElement(Object.values(week.dates));
+        if (!day) continue;
+        const time = this.getRandomElement(['AM', 'PM'] as Array<Time>);
+        if (!time) continue;
+        const session = day[time];
+        if (!session) continue;
+        const entry = this.getRandomElement(session.entries);
+
+        if (entry)
+          return {
+            week,
+            day,
+            session,
+            entry,
+          };
       }
-      throw new Error('Unable to find random entry');
+      throw new Error('Unable to find random entry after 100 iterations');
     },
 
-    swap(
-      sol: CostMonth,
-      day1: CostDate,
-      session1: CostSession,
-      entry1: CostEntry,
-      day2: CostDate,
-      session2: CostSession,
-      entry2: CostEntry
-    ) {
+    swap(sol: CostMonth, a: Cost, b: Cost) {
       // swap activity
-      const entry1activity = entry1.activity;
-      entry1.activity = entry2.activity;
-      entry2.activity = entry1activity;
+      const entry1activity = a.entry.activity;
+      a.entry.activity = b.entry.activity;
+      b.entry.activity = entry1activity;
 
-      const entry1deltacost = -1 * (entry1.cost - getEntryCost(entry1));
-      const entry2deltacost = -1 * (entry2.cost - getEntryCost(entry2));
+      const entry1deltacost = -1 * (a.entry.cost - this.getEntryCost(a.entry));
+      const entry2deltacost = -1 * (b.entry.cost - this.getEntryCost(b.entry));
 
-      const session1deltacost = -1 * (session1.cost - getSessionCost(session1));
-      const session2deltacost = -1 * (session2.cost - getSessionCost(session2));
+      const session1deltacost =
+        -1 * (a.session.cost - this.getSessionCost(a.session));
+      const session2deltacost =
+        -1 * (b.session.cost - this.getSessionCost(b.session));
 
-      const day1deltacost = -1 * (day1.cost - getDayCost(day1));
-      const day2deltacost = -1 * (day2.cost - getDayCost(day2));
+      const day1deltacost = -1 * (a.day.cost - this.getDayCost(a.day));
+      const day2deltacost = -1 * (b.day.cost - this.getDayCost(b.day));
+
+      const week1deltacost = -1 * (a.week.cost - this.getWeekCost(a.week));
+      const week2deltacost = -1 * (b.week.cost - this.getWeekCost(b.week));
 
       sol.oldcost = sol.cost;
       sol.cost +=
@@ -396,50 +424,55 @@ export const useRosterStore = defineStore('roster', {
         session1deltacost +
         session2deltacost +
         day1deltacost +
-        day2deltacost;
+        day2deltacost +
+        week1deltacost +
+        week2deltacost;
     },
 
-    unswap(
-      sol: CostMonth,
-      day1: CostDate,
-      session1: CostSession,
-      entry1: CostEntry,
-      day2: CostDate,
-      session2: CostSession,
-      entry2: CostEntry
-    ) {
+    unswap(sol: CostMonth, a: Cost, b: Cost) {
       sol.cost = sol.oldcost;
-      day1.cost = day1.oldcost;
-      day2.cost = day2.oldcost;
-      session1.cost = session1.oldcost;
-      session2.cost = session2.oldcost;
-      entry1.cost = entry1.oldcost;
-      entry2.cost = entry2.oldcost;
-      const entry1oldactivity = entry1.activity;
-      entry1.activity = entry2.activity;
-      entry2.activity = entry1oldactivity;
+      a.week.cost = a.week.oldcost;
+      b.week.cost = b.week.oldcost;
+      a.day.cost = a.day.oldcost;
+      b.day.cost = b.day.oldcost;
+      a.session.cost = a.session.oldcost;
+      b.session.cost = b.session.oldcost;
+      a.entry.cost = a.entry.oldcost;
+      b.entry.cost = b.entry.oldcost;
+      const entry1oldactivity = a.entry.activity;
+      a.entry.activity = b.entry.activity;
+      b.entry.activity = entry1oldactivity;
     },
 
     acceptance_probability(old_cost: number, new_cost: number, T: number) {
-      return 0;
+      return Math.exp((new_cost - old_cost) / T);
     },
 
     getCost(sol: CostMonth) {
       let entriesCost = 0;
       let sessionsCost = 0;
-      Object.keys(sol).forEach((date) => {
-        Object.keys(sol[date]).forEach((time) => {
-          // sum cost of each entry
-          entriesCost += sol[date][time].reduce(
-            (accum, entry) => accum + getEntryCost(entry),
-            0
-          );
-
-          // sum cost of each session
-          sessionsCost += getSessionCost(sol, date, time);
+      let daysCost = 0;
+      let weeksCost = 0;
+      Object.values(sol.weeks).forEach((week) => {
+        Object.values(week.dates).forEach((day) => {
+          (['AM', 'PM'] as Array<Time>).forEach((time) => {
+            const session = day[time];
+            if (session) {
+              entriesCost += session.entries.reduce(
+                (accum, entry) => accum + this.getEntryCost(entry),
+                0
+              );
+              sessionsCost += this.getSessionCost(session);
+            }
+          });
+          daysCost += this.getDayCost(day);
         });
+        weeksCost = +this.getWeekCost(week);
       });
-      return 0;
+      console.log(entriesCost, sessionsCost, daysCost, weeksCost);
+      const totalCost = entriesCost + sessionsCost + daysCost + weeksCost;
+      sol.oldcost = sol.cost;
+      sol.cost = totalCost;
     },
 
     getEntryCost(entry: CostEntry) {
@@ -472,70 +505,61 @@ export const useRosterStore = defineStore('roster', {
       return cost;
     },
 
-    getSessionCost(session: CostSession) {
+    getTimespanCost(timespan: CostWeek | CostDate | CostSession, rule: string) {
       const activityStore = useActivityStore();
       let cost = 0;
-
-      const activityCount: Record<string, number> = {};
-      session.entries.forEach((entry) => {
-        if (!activityCount[entry.activity]) activityCount[entry.activity] = 1;
-        else activityCount[entry.activity] = activityCount[entry.activity] + 1;
-      });
-
-      Object.keys(activityCount).forEach((activityName) => {
-        const activity = activityStore.getActivity(activityName);
-        if (activity && activity.perSession) {
-          const rule = activity.perSession;
-          if (Array.isArray(rule)) {
-            if (activityCount[activityName] < rule[0])
-              cost = cost + (activityName == 'DSR' ? 3 : 1);
-            if (activityCount[activityName] > rule[1]) cost = cost + 1;
+      Object.keys(timespan.activityCount).forEach((activityName) => {
+        const activity = activityStore.getActivity(activityName) as Record<
+          string,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          any
+        >;
+        if (activity && activity[rule]) {
+          if (Array.isArray(activity.rule)) {
+            if (timespan.activityCount[activityName] < activity.rule[0])
+              cost = cost + 1;
+            if (timespan.activityCount[activityName] > activity.rule[1])
+              cost = cost + 1;
           } else {
-            if (activityCount[activityName] != rule) cost = cost + 3;
+            if (timespan.activityCount[activityName] != activity.rule)
+              cost = cost + 3;
           }
         }
+      });
+      return cost;
+    },
+
+    getSessionCost(session: CostSession) {
+      const activityCount = session.activityCount;
+      session.entries.forEach((entry) => {
+        if (activityCount[entry.activity])
+          activityCount[entry.activity] = activityCount[entry.activity] + 1;
       });
 
       session.oldcost = session.cost;
-      session.cost = cost;
-      return cost;
+      session.cost = this.getTimespanCost(session, 'perSession');
+      return session.cost;
     },
 
     getDayCost(day: CostDate) {
-      const activityStore = useActivityStore();
-      let cost = 0;
-
-      const activityCount: Record<string, number> = {};
-      const addActivity = (entry: CostEntry) => {
-        if (!activityCount[entry.activity]) activityCount[entry.activity] = 1;
-        else activityCount[entry.activity] = activityCount[entry.activity] + 1;
-      };
-
-      if (day.AM) day.AM.entries.forEach(addActivity);
-      if (day.PM) day.PM.entries.forEach(addActivity);
-
-      Object.keys(activityCount).forEach((activityName) => {
-        const activity = activityStore.getActivity(activityName);
-        if (activity && activity.perDay) {
-          const rule = activity.perDay;
-          if (Array.isArray(rule)) {
-            if (activityCount[activityName] < rule[0]) cost = cost + 1;
-            if (activityCount[activityName] > rule[1]) cost = cost + 1;
-          } else {
-            if (activityCount[activityName] != rule) cost = cost + 3;
-          }
-        }
-      });
+      day.activityCount = sumObjectsByKey([
+        day.AM ? day.AM.activityCount : {},
+        day.PM ? day.PM.activityCount : {},
+      ]);
 
       day.oldcost = day.cost;
-      day.cost = cost;
-      return cost;
+      day.cost = this.getTimespanCost(day, 'perDay');
+      return day.cost;
     },
 
-    getWeekCost(sol) {
-      // not enough EEG
-      // not enough EMG
-      return 0;
+    getWeekCost(week: CostWeek) {
+      week.activityCount = sumObjectsByKey(
+        Object.values(week.dates).map((day) => day.activityCount)
+      );
+
+      week.oldcost = week.cost;
+      week.cost = this.getTimespanCost(week, 'perWeek');
+      return week.cost;
     },
   },
 });

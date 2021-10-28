@@ -137,6 +137,13 @@
       icon="update"
       label="Load NCT and CRS"
     ></q-btn>
+    <q-btn
+      color="secondary"
+      :disable="monthStore.isArchived"
+      @click="rosterStore.anneal()"
+      icon="update"
+      label="Anneal"
+    ></q-btn>
     <q-dialog v-model="confirmNCT" persistent>
       <q-card>
         <q-card-section>

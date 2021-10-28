@@ -120,23 +120,40 @@ export interface CostEntry {
 }
 
 export interface CostSession {
+  date: Date;
+  time: Time;
   cost: number;
   oldcost: number;
   entries: Array<CostEntry>;
-  date: Date;
-  time: Time;
+  activityCount: Record<string, number>;
 }
 
 export interface CostDate {
+  date: Date;
   cost: number;
   oldcost: number;
   AM?: CostSession;
   PM?: CostSession;
-  date: Date;
+  activityCount: Record<string, number>;
 }
+
+export type CostWeek = {
+  week: number;
+  cost: number;
+  oldcost: number;
+  dates: Record<string, CostDate>;
+  activityCount: Record<string, number>;
+};
 
 export type CostMonth = {
   cost: number;
   oldcost: number;
-  dates: Record<string, CostDate>;
+  weeks: Record<string, CostWeek>;
+};
+
+export type Cost = {
+  week: CostWeek;
+  day: CostDate;
+  session: CostSession;
+  entry: CostEntry;
 };
