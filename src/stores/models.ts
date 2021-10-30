@@ -109,49 +109,46 @@ export interface SMOCellDefinition {
   id: string;
 }
 
-export interface CostEntry {
+export type Cost = {
+  cost: number;
+  oldcost: number;
+};
+
+export interface CostEntry extends Cost {
   date: Date;
   time: Time;
   smo: string;
   activity: string;
   version: string;
-  cost: number;
-  oldcost: number;
 }
 
-export interface CostSession {
+export interface CostSession extends Cost {
   date: Date;
   time: Time;
-  cost: number;
-  oldcost: number;
   entries: Array<CostEntry>;
   activityCount: Record<string, number>;
 }
 
-export interface CostDate {
+export interface CostDate extends Cost {
   date: Date;
-  cost: number;
-  oldcost: number;
   AM?: CostSession;
   PM?: CostSession;
   activityCount: Record<string, number>;
 }
 
-export type CostWeek = {
+export interface CostWeek extends Cost {
   week: number;
-  cost: number;
-  oldcost: number;
   dates: Record<string, CostDate>;
   activityCount: Record<string, number>;
-};
+}
 
-export type CostMonth = {
+export interface CostMonth extends Cost {
   cost: number;
   oldcost: number;
   weeks: Record<string, CostWeek>;
-};
+}
 
-export type Cost = {
+export type Costs = {
   week: CostWeek;
   day: CostDate;
   session: CostSession;

@@ -12,6 +12,7 @@ import {
   CostDate,
   CostWeek,
   Cost,
+  Costs,
 } from './models';
 
 import {
@@ -265,9 +266,9 @@ export const useRosterStore = defineStore('roster', {
 
       // build initial solution
       // fill sol with appropriate dates,times,smos excluding any unchangeable sessions such as leave/ward with random activity
-      monthStore.dates.forEach((date) => {
+      monthStore.dates.slice(0, 10).forEach((date) => {
         if (store.isHoliday(date)) return;
-        smoStore.activeSMOs.forEach((smo) => {
+        smoStore.activeSMOs.slice(0, 5).forEach((smo) => {
           (['AM', 'PM'] as Array<Time>).forEach((time) => {
             // exclude session if already assigned to Leave or Ward
             if (
@@ -332,25 +333,50 @@ export const useRosterStore = defineStore('roster', {
       });
 
       this.getCost(sol);
-      let T = 1.0;
-      const T_min = 0.001;
+      let T = 1000;
+      const T_min = 100;
       const alpha = 0.9;
       while (T > T_min) {
         let i = 1;
+        console.log(`T=${T.toFixed(3)}: StartCost=${sol.cost}`);
+        let numlowercost = 0;
+        let numhighercost = 0;
+        let numrejected = 0;
         while (i <= 100) {
           const a = this.getRandomEntry(sol);
           const b = this.getRandomEntry(sol);
 
           this.swap(sol, a, b);
 
-          const ap = this.acceptance_probability(sol.oldcost, sol.cost, T);
-          if (ap <= Math.random()) {
-            // reject swap, revert to pre swap
-            this.unswap(sol, a, b);
+          if (this.getDeltaCost(sol) <= 0) {
+            // keep swap
+            numlowercost++;
+          } else {
+            const ap = this.acceptance_probability(sol.oldcost, sol.cost, T);
+            // console.log(
+            //   'ap: ',
+            //   ap,
+            //   sol.oldcost,
+            //   sol.cost,
+            //   this.getDeltaCost(sol)
+            // );
+            if (ap > Math.random()) {
+              // keep swap despite higher cost
+              // console.log('keep despite higher cost');
+              numhighercost++;
+            } else {
+              // reject swap, revert to pre swap
+              // console.log('reject');
+              numrejected++;
+              this.unswap(sol, a, b);
+            }
           }
+
           i += 1;
         }
-        console.log(T, sol.cost);
+        console.log(
+          `-- EndCost: ${sol.cost}, NumLowerCost: ${numlowercost}, NumHigherCostAccepted: ${numhighercost}, NumHigherCostRejected: ${numrejected}`
+        );
         T = T * alpha;
       }
       return sol;
@@ -397,39 +423,69 @@ export const useRosterStore = defineStore('roster', {
       throw new Error('Unable to find random entry after 100 iterations');
     },
 
-    swap(sol: CostMonth, a: Cost, b: Cost) {
+    swap(sol: CostMonth, a: Costs, b: Costs) {
       // swap activity
+
+      // console.log('Preswap');
+      // console.log('a.entry: ', a.entry.smo, a.entry.activity, a.entry.cost);
+      // console.log('b.entry: ', b.entry.smo, b.entry.activity, b.entry.cost);
+
+      a.session.activityCount[a.entry.activity] -= 1;
+      b.session.activityCount[b.entry.activity] -= 1;
+      a.day.activityCount[a.entry.activity] -= 1;
+      b.day.activityCount[b.entry.activity] -= 1;
+      a.week.activityCount[a.entry.activity] -= 1;
+      b.week.activityCount[b.entry.activity] -= 1;
+
       const entry1activity = a.entry.activity;
       a.entry.activity = b.entry.activity;
       b.entry.activity = entry1activity;
 
-      const entry1deltacost = -1 * (a.entry.cost - this.getEntryCost(a.entry));
-      const entry2deltacost = -1 * (b.entry.cost - this.getEntryCost(b.entry));
+      a.session.activityCount[a.entry.activity] += 1;
+      b.session.activityCount[b.entry.activity] += 1;
+      a.day.activityCount[a.entry.activity] += 1;
+      b.day.activityCount[b.entry.activity] += 1;
+      a.week.activityCount[a.entry.activity] += 1;
+      b.week.activityCount[b.entry.activity] -= 1;
 
-      const session1deltacost =
-        -1 * (a.session.cost - this.getSessionCost(a.session));
-      const session2deltacost =
-        -1 * (b.session.cost - this.getSessionCost(b.session));
+      this.getEntryCost(a.entry);
+      this.getEntryCost(b.entry);
+      this.getSessionCost(a.session);
+      this.getSessionCost(b.session);
+      this.getDayCost(a.day);
+      this.getDayCost(b.day);
+      this.getWeekCost(a.week);
+      this.getWeekCost(b.week);
 
-      const day1deltacost = -1 * (a.day.cost - this.getDayCost(a.day));
-      const day2deltacost = -1 * (b.day.cost - this.getDayCost(b.day));
-
-      const week1deltacost = -1 * (a.week.cost - this.getWeekCost(a.week));
-      const week2deltacost = -1 * (b.week.cost - this.getWeekCost(b.week));
+      // console.log('Postswap');
+      // console.log(
+      //   'a.entry: ',
+      //   a.entry.smo,
+      //   a.entry.activity,
+      //   a.entry.cost,
+      //   this.getDeltaCost(a.entry)
+      // );
+      // console.log(
+      //   'b.entry: ',
+      //   b.entry.smo,
+      //   b.entry.activity,
+      //   b.entry.cost,
+      //   this.getDeltaCost(b.entry)
+      // );
 
       sol.oldcost = sol.cost;
       sol.cost +=
-        entry1deltacost +
-        entry2deltacost +
-        session1deltacost +
-        session2deltacost +
-        day1deltacost +
-        day2deltacost +
-        week1deltacost +
-        week2deltacost;
+        this.getDeltaCost(a.entry) +
+        this.getDeltaCost(b.entry) +
+        this.getDeltaCost(a.session) +
+        this.getDeltaCost(b.session) +
+        this.getDeltaCost(a.day) +
+        this.getDeltaCost(b.day) +
+        this.getDeltaCost(a.week) +
+        this.getDeltaCost(b.week);
     },
 
-    unswap(sol: CostMonth, a: Cost, b: Cost) {
+    unswap(sol: CostMonth, a: Costs, b: Costs) {
       sol.cost = sol.oldcost;
       a.week.cost = a.week.oldcost;
       b.week.cost = b.week.oldcost;
@@ -445,7 +501,7 @@ export const useRosterStore = defineStore('roster', {
     },
 
     acceptance_probability(old_cost: number, new_cost: number, T: number) {
-      return Math.exp((new_cost - old_cost) / T);
+      return Math.exp(-(new_cost - old_cost) / T);
     },
 
     getCost(sol: CostMonth) {
@@ -473,6 +529,10 @@ export const useRosterStore = defineStore('roster', {
       const totalCost = entriesCost + sessionsCost + daysCost + weeksCost;
       sol.oldcost = sol.cost;
       sol.cost = totalCost;
+    },
+
+    getDeltaCost(timespan: Cost) {
+      return timespan.cost - timespan.oldcost;
     },
 
     getEntryCost(entry: CostEntry) {
