@@ -137,13 +137,6 @@
       icon="update"
       label="Load NCT and CRS"
     ></q-btn>
-    <q-btn
-      color="secondary"
-      :disable="monthStore.isArchived"
-      @click="rosterStore.anneal()"
-      icon="update"
-      label="Anneal"
-    ></q-btn>
     <q-dialog v-model="confirmNCT" persistent>
       <q-card>
         <q-card-section>
@@ -166,6 +159,16 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+    <q-btn
+      color="secondary"
+      :disable="monthStore.isArchived"
+      @click="anneal = true"
+      icon="update"
+      label="Anneal"
+    ></q-btn>
+    <q-dialog v-model="anneal">
+      <anneal-graph @cancel="anneal = false"></anneal-graph>
+    </q-dialog>
     <q-btn color="primary" @click="exportXLS" icon="file_download" label="Export Excel"></q-btn>
     <!-- <q-btn color="primary" @click="store.doDeleteNCT" icon="file_download" label="Delete NCT"></q-btn> -->
   </div>
@@ -180,9 +183,11 @@ import { useRosterStore } from '../stores/rosterStore';
 import * as excelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { useSMOStore } from 'src/stores/smoStore';
+import AnnealGraph from './annealGraph.vue'
 
 export default defineComponent({
   // name: 'ComponentName'
+  components: { AnnealGraph },
   setup() {
     const store = useStore();
     const monthStore = useMonthStore();
@@ -194,6 +199,7 @@ export default defineComponent({
       newVersion: false,
       finaliseVersion: false,
       deleteVersion: false,
+      anneal: false,
       newVersionName: '',
     });
 
@@ -540,7 +546,7 @@ export default defineComponent({
       monthStore,
       rosterStore,
       format,
-      exportXLS
+      exportXLS,
     };
   },
 });

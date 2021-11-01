@@ -154,3 +154,25 @@ export type Costs = {
   session: CostSession;
   entry: CostEntry;
 };
+
+export interface AnnealParams {
+  TMax: number;
+  TMin: number;
+  Tk: number;
+  alpha: number;
+  reps: number;
+  xmax: number;
+  readyDo: boolean;
+  InitialCost: number;
+}
+export interface AnnealMessage {
+  message: string;
+  data: unknown;
+}
+
+export interface AnnealProgress {
+  frame: number;
+  cost: number;
+  T: number;
+  accepted: number;
+}
