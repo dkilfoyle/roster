@@ -3,34 +3,28 @@
     <q-card-section>
       <div class="row">
         <div class="col-auto">
-          <q-input v-model="annealParams.initialCost" label="Starting Cost" readyonly></q-input>
+          <q-input v-model="annealParams.InitialCost" label="Starting Cost" readyonly></q-input>
           <q-input v-model="annealParams.TMax" label="TMax"></q-input>
           <q-input v-model="annealParams.Tk" label="Tk"></q-input>
           <q-input v-model="annealParams.TMin" label="TMin"></q-input>
-          <q-input v-model="annealParams.alpha" label="Alpha"></q-input>
           <q-input v-model="annealParams.reps" label="Iterations"></q-input>
-          <q-input
-            v-show="annealParams.state = 'done'"
-            v-model="annealParams.finalCost"
-            label="Final Cost"
-            readonly
-          ></q-input>
         </div>
         <div class="col">
-          <LineChart style="height:400px !important" v-bind="lineChartProps"></LineChart>
+          <LineChart style="max-height:400px !important" v-bind="lineChartProps"></LineChart>
         </div>
       </div>
     </q-card-section>
     <q-card-actions align="right">
       <q-btn label="Export" @click="exportAnneal"></q-btn>
       <q-btn label="Cancel" @click="emit('cancel')"></q-btn>
-      <q-btn :label="annealLabel" @click="annealClick"></q-btn>
+      <q-btn label="Init" @click="initAnneal"></q-btn>
+      <q-btn label="Go" @click="doAnneal"></q-btn>
     </q-card-actions>
   </q-card>
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, ref, reactive } from 'vue';
+import { defineComponent, computed, ref, reactive, nextTick } from 'vue';
 import { LineChart, useLineChart } from 'vue-chart-3';
 import { Chart, ChartData, ChartOptions, registerables } from 'chart.js';
 import {
@@ -49,6 +43,7 @@ import { useActivityStore } from 'src/stores/activityStore';
 import { useMonthStore } from 'src/stores/monthStore';
 import { useSMOStore } from 'src/stores/smoStore';
 import { useStore } from 'src/stores/store';
+
 import { getWeek, format } from 'date-fns';
 Chart.register(...registerables);
 
@@ -71,33 +66,28 @@ export default defineComponent({
       alpha: 0.9,
       reps: 100,
       xmax: 100,
-      state: 'uninit',
-      initialCost: 0,
-      finalCost: 0,
+      readyDo: false,
+      InitialCost: 0,
     });
 
     const annealCost = ref(Array<number>());
     const annealTemp = ref(Array<number>());
-    const annealTempStep = ref(Array<number>());
+    const annealSwap = ref(Array<number>());
     const annealAccepted = ref(Array<number>());
     const annealAcceptedHigherCost = ref(Array<number>());
     const annealAcceptedLowerCost = ref(Array<number>());
 
     const chartData = computed<ChartData<'line'>>(() => {
       return {
-        labels: [...annealTempStep.value], //annealProgress.value.map((prog) => prog.i),
+        labels: [...annealSwap.value], //annealProgress.value.map((prog) => prog.i),
         datasets: [
           {
             label: 'Cost',
             data: [...annealCost.value], //annealProgress.map((prog) => prog) }]
-            borderColor: 'rgb(75, 192, 192)',
-            backgroundColor: 'rgb(75, 192, 192)',
           },
           {
             label: 'Temp',
             data: [...annealTemp.value], //annealProgress.map((prog) => prog) }]
-            borderColor: 'rgb(255, 99, 132)',
-            backgroundColor: 'rgb(255, 99, 132)',
           }
         ]
       }
@@ -106,19 +96,13 @@ export default defineComponent({
 
     const chartOptions = computed<ChartOptions<'line'>>(() => {
       return {
-        animation: false,
-        responsive: true,
-        maintainAspectRatio: false,
         scales: {
-          x: {
+          xAxis: {
             max: annealParams.xmax,
-            min: 0,
-            type: 'linear',
-            steps: 10
-
+            min: 0
           },
-          y: {
-            max: annealParams.initialCost * 1.2,
+          yAxis: {
+            max: annealParams.InitialCost * 1.2,
             min: 0
           }
         }
@@ -144,9 +128,9 @@ export default defineComponent({
     const buildRandomSolution = () => {
       // build initial solution
       // fill sol with appropriate dates,times,smos excluding any unchangeable sessions such as leave/ward with random activity
-      monthStore.dates.forEach((date) => {
+      monthStore.dates.slice(0, 10).forEach((date) => {
         if (store.isHoliday(date)) return;
-        smoStore.activeSMOs.forEach((smo) => {
+        smoStore.activeSMOs.slice(0, 5).forEach((smo) => {
           (['AM', 'PM'] as Array<Time>).forEach((time) => {
             // exclude session if already assigned to Leave or Ward
             if (
@@ -237,10 +221,10 @@ export default defineComponent({
     };
 
     const calcAnnealParams = () => {
-      annealParams.initialCost = sol.cost;
+      annealParams.InitialCost = sol.cost;
       annealParams.TMax = Number((sol.cost * annealParams.Tk).toFixed(4));
-      annealParams.TMin = Number((annealParams.TMax * 0.00001).toFixed(4));
-      annealParams.state = 'ready';
+      annealParams.TMin = Number((annealParams.TMax * 0.001).toFixed(4));
+      annealParams.readyDo = true;
       annealParams.xmax = Number(
         (
           Math.log(annealParams.TMin / annealParams.TMax) /
@@ -249,25 +233,6 @@ export default defineComponent({
       );
       console.log(annealParams);
     };
-
-    const annealLabel = computed(() => {
-      switch (annealParams.state) {
-        case 'ready': return 'Go';
-        case 'uninit': return 'Init';
-        case 'running': return 'Stop';
-        case 'done': return 'Go';
-        default: return 'Error'
-      }
-    })
-
-    const annealClick = () => {
-      switch (annealParams.state) {
-        case 'ready':
-        case 'done': doAnneal(); break;
-        case 'uninit': initAnneal(); break;
-        case 'running': annealParams.state = 'done'; break;
-      }
-    }
 
     const initAnneal = () => {
       sol.cost = 0;
@@ -278,26 +243,28 @@ export default defineComponent({
       calcAnnealParams();
     };
 
-    const doAnneal = () => {
+    const doAnneal = async () => {
 
-      annealCost.value.splice(0, annealCost.value.length);
-      annealTemp.value.splice(0, annealTemp.value.length);
-      annealTempStep.value.splice(0, annealTempStep.value.length);
-      annealAccepted.value.splice(0, annealAccepted.value.length);
-      annealAcceptedHigherCost.value.splice(
-        0,
-        annealAcceptedHigherCost.value.length
-      );
-      annealAcceptedLowerCost.value.splice(0, annealAcceptedLowerCost.value.length);
+      // debugger;
+
+      // annealCost.value.splice(0, annealCost.value.length);
+      // annealTemp.value.splice(0, annealTemp.value.length);
+      // annealSwap.value.splice(0, annealSwap.value.length);
+      // annealAccepted.value.splice(0, annealAccepted.value.length);
+      // annealAcceptedHigherCost.value.splice(
+      //   0,
+      //   annealAcceptedHigherCost.value.length
+      // );
+      // annealAcceptedLowerCost.value.splice(0, annealAcceptedLowerCost.value.length);
 
       let T = annealParams.TMax;
       const T_min = annealParams.TMin;
       const alpha = annealParams.alpha;
+
       let frame = 0;
 
-      annealParams.state = 'running';
-
-      const doFrame = () => {
+      // animate does while (T>T_min) but releases animation frames
+      while (T > T_min) {
         let i = 1;
         frame++;
         // console.log(`T=${T.toFixed(3)}: StartCost=${sol.cost}`);
@@ -336,22 +303,19 @@ export default defineComponent({
 
           i += 1;
         }
+        // console.log(
+        //   `-- EndCost: ${sol.cost}, NumLowerCost: ${numlowercost}, NumHigherCostAccepted: ${numhighercost}, NumHigherCostRejected: ${numrejected}`
+        // );
+
         annealCost.value.push(sol.cost);
         annealTemp.value.push(T);
-        annealTempStep.value.push(frame);
+        annealSwap.value.push(frame);
         annealAccepted.value.push(numhighercost + numlowercost)
+        await nextTick();
         T = T * alpha;
-        if (T > T_min && annealParams.state == 'running') requestAnimationFrame(doFrame);
       }
 
-      requestAnimationFrame(doFrame);
-
-      // console.log(
-      //   `-- EndCost: ${sol.cost}, NumLowerCost: ${numlowercost}, NumHigherCostAccepted: ${numhighercost}, NumHigherCostRejected: ${numrejected}`
-      // );
-
-      annealParams.state = 'done';
-      annealParams.finalCost = sol.cost;
+      annealParams.readyDo = false;
       return sol;
     };
 
@@ -490,18 +454,18 @@ export default defineComponent({
 
       // smo is not capable of this activity
       if (smoStore.getSMO(entry.smo).activities.includes(entry.activity) == false)
-        cost += 3;
+        cost += 10;
 
       // activity is not rosterable at this time
       if (
         activityStore.isAllowedActivity(entry.date, entry.time, entry.activity) ==
         false
       )
-        cost += 2;
+        cost += 7;
 
       // smo is not rosterable at this time
       if (smoStore.isAllowedTimeSMO(entry.date, entry.time, entry.smo) == false)
-        cost += 1;
+        cost += 5;
 
       entry.oldcost = entry.cost;
       entry.cost = cost;
@@ -528,7 +492,7 @@ export default defineComponent({
               cost = cost + 1;
           } else {
             if (timespan.activityCount[activityName] != activity.rule)
-              cost = cost + 1;
+              cost = cost + 3;
           }
         }
       });
@@ -583,7 +547,7 @@ export default defineComponent({
 
 
     return {
-      lineChartProps, exportAnneal, annealLabel, annealClick, annealParams, emit
+      lineChartProps, exportAnneal, initAnneal, doAnneal, annealParams, emit
     };
   }
 });
