@@ -1,36 +1,39 @@
 <template>
   <q-card style="width:1200px; max-width:80vw">
-    <q-card-section>
-      <div class="row">
-        <div class="col-auto">
-          <q-input v-model="annealParams.initialCost" label="Starting Cost" readyonly></q-input>
-          <q-input v-model="annealParams.TMax" label="TMax"></q-input>
-          <q-input v-model="annealParams.Tk" label="Tk"></q-input>
-          <q-input v-model="annealParams.TMin" label="TMin"></q-input>
-          <q-input v-model="annealParams.alpha" label="Alpha"></q-input>
-          <q-input v-model="annealParams.reps" label="Iterations"></q-input>
-          <q-input
-            v-show="annealParams.state = 'done'"
-            v-model="annealParams.finalCost"
-            label="Final Cost"
-            readonly
-          ></q-input>
-        </div>
-        <div class="col">
-          <LineChart style="height:400px !important" v-bind="lineChartProps"></LineChart>
-        </div>
-      </div>
+    <q-card-section horizontal>
+      <q-card-section>
+        <q-input v-model="annealParams.initialCost" label="Starting Cost" readonly></q-input>
+        <q-input v-model="sol.cost" label="Running Cost" readonly></q-input>
+        <q-input v-model="annealParams.TMax" label="TMax"></q-input>
+        <q-field label="Tk" stack-label>
+          <q-slider v-model="annealParams.Tk" :min="0.01" :max="1.2" :step="0.01" label></q-slider>
+        </q-field>
+        <q-input v-model="annealParams.TMin" label="TMin"></q-input>
+        <q-field label="alpha" stack-label>
+          <template v-slot:control>
+            <q-slider v-model="annealParams.alpha" :min="0.8" :max="0.99" :step="0.01" label></q-slider>
+          </template>
+        </q-field>
+
+        <q-input v-model="annealParams.reps" label="Iterations"></q-input>
+      </q-card-section>
+      <q-separator vertical inset></q-separator>
+      <q-card-section class="col">
+        <LineChart style="height:400px !important" v-bind="lineChartProps"></LineChart>
+      </q-card-section>
     </q-card-section>
-    <q-card-actions align="right">
-      <q-btn label="Export" @click="exportAnneal"></q-btn>
-      <q-btn label="Cancel" @click="emit('cancel')"></q-btn>
-      <q-btn :label="annealLabel" @click="annealClick"></q-btn>
+    <q-separator></q-separator>
+    <q-card-actions align="right" class="q-my-sm">
+      <q-btn color="secondary" label="Export" @click="exportAnneal"></q-btn>
+      <q-btn color="negative" label="Cancel" @click="emit('cancel')"></q-btn>
+      <q-btn color="primary" label="Init" @click="initAnneal"></q-btn>
+      <q-btn color="primary" :label="annealLabel" @click="annealClick"></q-btn>
     </q-card-actions>
   </q-card>
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, ref, reactive } from 'vue';
+import { defineComponent, computed, ref, reactive, onMounted, watch } from 'vue';
 import { LineChart, useLineChart } from 'vue-chart-3';
 import { Chart, ChartData, ChartOptions, registerables } from 'chart.js';
 import {
@@ -76,6 +79,11 @@ export default defineComponent({
       finalCost: 0,
     });
 
+    onMounted(() => initAnneal());
+    watch(() => annealParams.Tk, (newVal) => {
+      annealParams.TMax = Number((annealParams.initialCost * newVal).toFixed(1));
+    });
+
     const annealCost = ref(Array<number>());
     const annealTemp = ref(Array<number>());
     const annealTempStep = ref(Array<number>());
@@ -98,6 +106,13 @@ export default defineComponent({
             data: [...annealTemp.value], //annealProgress.map((prog) => prog) }]
             borderColor: 'rgb(255, 99, 132)',
             backgroundColor: 'rgb(255, 99, 132)',
+          },
+          {
+            label: 'Accepted',
+            data: [...annealAccepted.value], //annealProgress.map((prog) => prog) }]
+            borderColor: 'rgb(153, 102, 255)',
+            backgroundColor: 'rgb(153, 102, 255)',
+            yAxisID: 'y2'
           }
         ]
       }
@@ -111,7 +126,8 @@ export default defineComponent({
         maintainAspectRatio: false,
         scales: {
           x: {
-            max: annealParams.xmax,
+            max: Math.log(annealParams.TMin / annealParams.TMax) /
+              Math.log(annealParams.alpha),
             min: 0,
             type: 'linear',
             steps: 10
@@ -120,6 +136,16 @@ export default defineComponent({
           y: {
             max: annealParams.initialCost * 1.2,
             min: 0
+          },
+          y2: {
+            max: 101,
+            min: 0,
+            type: 'linear',
+            position: 'right',
+            // grid line settings
+            grid: {
+              drawOnChartArea: false, // only want the grid lines for one axis to show up
+            },
           }
         }
       }
@@ -241,31 +267,20 @@ export default defineComponent({
       annealParams.TMax = Number((sol.cost * annealParams.Tk).toFixed(4));
       annealParams.TMin = Number((annealParams.TMax * 0.00001).toFixed(4));
       annealParams.state = 'ready';
-      annealParams.xmax = Number(
-        (
-          Math.log(annealParams.TMin / annealParams.TMax) /
-          Math.log(annealParams.alpha)
-        ).toFixed(4)
-      );
-      console.log(annealParams);
     };
 
     const annealLabel = computed(() => {
       switch (annealParams.state) {
         case 'ready': return 'Go';
-        case 'uninit': return 'Init';
         case 'running': return 'Stop';
-        case 'done': return 'Go';
         default: return 'Error'
       }
     })
 
     const annealClick = () => {
       switch (annealParams.state) {
-        case 'ready':
-        case 'done': doAnneal(); break;
-        case 'uninit': initAnneal(); break;
-        case 'running': annealParams.state = 'done'; break;
+        case 'ready': doAnneal(); break;
+        case 'running': annealParams.state = 'ready'; break;
       }
     }
 
@@ -341,18 +356,17 @@ export default defineComponent({
         annealTempStep.value.push(frame);
         annealAccepted.value.push(numhighercost + numlowercost)
         T = T * alpha;
-        if (T > T_min && annealParams.state == 'running') requestAnimationFrame(doFrame);
+        if ((T > T_min) && annealParams.state == 'running') requestAnimationFrame(doFrame); else {
+          annealParams.state = 'ready';
+          annealParams.finalCost = sol.cost;
+          console.log(
+            `-- EndCost: ${sol.cost}`
+          );
+        }
       }
 
       requestAnimationFrame(doFrame);
 
-      // console.log(
-      //   `-- EndCost: ${sol.cost}, NumLowerCost: ${numlowercost}, NumHigherCostAccepted: ${numhighercost}, NumHigherCostRejected: ${numrejected}`
-      // );
-
-      annealParams.state = 'done';
-      annealParams.finalCost = sol.cost;
-      return sol;
     };
 
     const getZeroActivityCount = () => {
@@ -583,7 +597,7 @@ export default defineComponent({
 
 
     return {
-      lineChartProps, exportAnneal, annealLabel, annealClick, annealParams, emit
+      lineChartProps, exportAnneal, annealLabel, annealClick, annealParams, emit, sol, initAnneal
     };
   }
 });
