@@ -45,6 +45,7 @@ import {
   Time,
   Cost,
   CostWeek,
+  ActivityDefinition,
 } from 'src/stores/models';
 
 import { useRosterStore } from 'src/stores/rosterStore';
@@ -156,14 +157,20 @@ export default defineComponent({
       options: chartOptions
     });
 
+    const isShufflable = (activity: ActivityDefinition) => {
+      return activity.type != 'Leave' &&
+        activity.name != 'Neuro' &&
+        activity.name != 'Stroke' &&
+        activity.name != 'CRS' &&
+        activity.name != 'NCT' &&
+        activity.name != 'Call' &&
+        activity.name != 'RT' &&
+        activity.name != 'CRS_GP' &&
+        activity.name != 'CRS_ACT'
+    }
+
     const shufflableActivities = activityStore.activities
-      .filter(
-        (activity) =>
-          activity.type != 'Leave' &&
-          activity.name != 'Neuro' &&
-          activity.name != 'Stroke' &&
-          activity.name != 'CRS'
-      )
+      .filter(isShufflable)
       .map((x) => x.name);
     const sol: CostMonth = { cost: 0, oldcost: 0, weeks: {} };
 
@@ -174,7 +181,7 @@ export default defineComponent({
         if (store.isHoliday(date)) return;
         smoStore.activeSMOs.forEach((smo) => {
           (['AM', 'PM'] as Array<Time>).forEach((time) => {
-            // exclude session if already assigned to Leave or Ward
+            // exclude session if not shufflable
             if (
               rosterStore.getRosterAtTime(date, time).some((entry) => {
                 return (
@@ -185,12 +192,15 @@ export default defineComponent({
             )
               return;
 
+            // exclude session if not assignable to this SMO
+            if (!smoStore.isAllowedTimeSMO(date, time, smo.name)) return;
+
             // choose a random (?allowable) activity
             const entry = {
               date,
               time,
               smo: smo.name,
-              activity: getRandomElement(shufflableActivities) || 'UnknownActivity',
+              activity: getRandomElement(smo.activities.filter((activity) => shufflableActivities.includes(activity))) || 'UnknownActivity',
               version: 'anneal',
               cost: 0,
               oldcost: 0,
@@ -199,8 +209,6 @@ export default defineComponent({
             const dateStr = 'D' + format(date, 'yyyyMMdd');
             const week = getWeek(date) - getWeek(monthStore.startDate);
             const weekStr = 'W' + week.toString();
-
-            getEntryCost(entry);
 
             if (!sol.weeks[weekStr])
               sol.weeks[weekStr] = {
@@ -223,7 +231,7 @@ export default defineComponent({
                 time,
                 cost: 0,
                 oldcost: 0,
-                entries: [entry],
+                entries: [],
                 activityCount: getZeroActivityCount(),
               };
 
@@ -240,6 +248,7 @@ export default defineComponent({
       let sessionsCost = 0;
       let daysCost = 0;
       let weeksCost = 0;
+      debugger;
       Object.values(sol.weeks).forEach((week) => {
         Object.values(week.dates).forEach((day) => {
           (['AM', 'PM'] as Array<Time>).forEach((time) => {
@@ -249,11 +258,14 @@ export default defineComponent({
                 (accum, entry) => accum + getEntryCost(entry),
                 0
               );
+              calcSessionActivityCount(session);
               sessionsCost += getSessionCost(session);
             }
           });
+          calcDayActivityCount(day);
           daysCost += getDayCost(day);
         });
+        calcWeekActivityCount(week);
         weeksCost += getWeekCost(week);
       });
       // console.log(entriesCost, sessionsCost, daysCost, weeksCost);
@@ -319,7 +331,7 @@ export default defineComponent({
         let numlowercost = 0;
         let numhighercost = 0;
         let numrejected = 0;
-        while (i <= 100) {
+        while (i <= annealParams.reps) {
           const a = getRandomEntry(sol);
           const b = getRandomEntry(sol);
 
@@ -370,9 +382,8 @@ export default defineComponent({
     };
 
     const getZeroActivityCount = () => {
-      const activityStore = useActivityStore();
       const activityCount: Record<string, number> = {};
-      activityStore.activityNames.forEach((activity) => {
+      shufflableActivities.forEach((activity) => {
         activityCount[activity] = 0;
       });
       return activityCount;
@@ -408,13 +419,7 @@ export default defineComponent({
       throw new Error('Unable to find random entry after 100 iterations');
     };
 
-    const swap = (sol: CostMonth, a: Costs, b: Costs) => {
-      // swap activity
-
-      // console.log('Preswap');
-      // console.log('a.entry: ', a.entry.smo, a.entry.activity, a.entry.cost);
-      // console.log('b.entry: ', b.entry.smo, b.entry.activity, b.entry.cost);
-
+    const swapActivity = (a: Costs, b: Costs) => {
       a.session.activityCount[a.entry.activity] -= 1;
       b.session.activityCount[b.entry.activity] -= 1;
       a.day.activityCount[a.entry.activity] -= 1;
@@ -432,6 +437,10 @@ export default defineComponent({
       b.day.activityCount[b.entry.activity] += 1;
       a.week.activityCount[a.entry.activity] += 1;
       b.week.activityCount[b.entry.activity] -= 1;
+    }
+
+    const swap = (sol: CostMonth, a: Costs, b: Costs) => {
+      swapActivity(a, b);
 
       getEntryCost(a.entry);
       getEntryCost(b.entry);
@@ -471,6 +480,7 @@ export default defineComponent({
     };
 
     const unswap = (sol: CostMonth, a: Costs, b: Costs) => {
+      swapActivity(a, b);
       sol.cost = sol.oldcost;
       a.week.cost = a.week.oldcost;
       b.week.cost = b.week.oldcost;
@@ -480,9 +490,6 @@ export default defineComponent({
       b.session.cost = b.session.oldcost;
       a.entry.cost = a.entry.oldcost;
       b.entry.cost = b.entry.oldcost;
-      const entry1oldactivity = a.entry.activity;
-      a.entry.activity = b.entry.activity;
-      b.entry.activity = entry1oldactivity;
     };
 
     const acceptance_probability = (
@@ -498,8 +505,6 @@ export default defineComponent({
     };
 
     const getEntryCost = (entry: CostEntry) => {
-      const smoStore = useSMOStore();
-      const activityStore = useActivityStore();
       let cost = 0;
 
       // smo is not capable of this activity
@@ -514,8 +519,8 @@ export default defineComponent({
         cost += 2;
 
       // smo is not rosterable at this time
-      if (smoStore.isAllowedTimeSMO(entry.date, entry.time, entry.smo) == false)
-        cost += 1;
+      // if (smoStore.isAllowedTimeSMO(entry.date, entry.time, entry.smo) == false)
+      //   cost += 1;
 
       entry.oldcost = entry.cost;
       entry.cost = cost;
@@ -526,7 +531,6 @@ export default defineComponent({
       timespan: CostWeek | CostDate | CostSession,
       rule: string
     ) => {
-      const activityStore = useActivityStore();
       let cost = 0;
       Object.keys(timespan.activityCount).forEach((activityName) => {
         const activity = activityStore.getActivity(activityName) as Record<
@@ -549,34 +553,40 @@ export default defineComponent({
       return cost;
     };
 
-    const getSessionCost = (session: CostSession) => {
+    const calcSessionActivityCount = (session: CostSession) => {
       const activityCount = session.activityCount;
       session.entries.forEach((entry) => {
         if (activityCount[entry.activity])
           activityCount[entry.activity] = activityCount[entry.activity] + 1;
       });
+    }
 
+    const getSessionCost = (session: CostSession) => {
       session.oldcost = session.cost;
       session.cost = getTimespanCost(session, 'perSession');
       return session.cost;
     };
 
-    const getDayCost = (day: CostDate) => {
+    const calcDayActivityCount = (day: CostDate) => {
       day.activityCount = sumObjectsByKey([
         day.AM ? day.AM.activityCount : {},
         day.PM ? day.PM.activityCount : {},
       ]);
+    }
 
+    const getDayCost = (day: CostDate) => {
       day.oldcost = day.cost;
       day.cost = getTimespanCost(day, 'perDay');
       return day.cost;
     };
 
-    const getWeekCost = (week: CostWeek) => {
+    const calcWeekActivityCount = (week: CostWeek) => {
       week.activityCount = sumObjectsByKey(
         Object.values(week.dates).map((day) => day.activityCount)
       );
+    }
 
+    const getWeekCost = (week: CostWeek) => {
       week.oldcost = week.cost;
       week.cost = getTimespanCost(week, 'perWeek');
       return week.cost;
