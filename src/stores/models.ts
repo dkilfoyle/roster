@@ -1,5 +1,7 @@
 export type Time = 'AM' | 'PM';
 
+export type RuleName = 'perSession' | 'perDay' | 'perWeek' | 'perMonth';
+
 export interface RosterData {
   date: Date;
   time: Time;

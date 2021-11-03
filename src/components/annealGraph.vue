@@ -46,6 +46,7 @@ import {
   Cost,
   CostWeek,
   ActivityDefinition,
+  RuleName,
 } from 'src/stores/models';
 
 import { useRosterStore } from 'src/stores/rosterStore';
@@ -181,26 +182,24 @@ export default defineComponent({
         if (store.isHoliday(date)) return;
         smoStore.activeSMOs.forEach((smo) => {
           (['AM', 'PM'] as Array<Time>).forEach((time) => {
-            // exclude session if not shufflable
-            if (
-              rosterStore.getRosterAtTime(date, time).some((entry) => {
+
+            //  shufflable - no longer, now include for costing but exclude from shuffle
+            const fixedEntry =
+              rosterStore.getRosterAtTime(date, time).find((entry) => {
                 return (
-                  entry.smo == smo.name &&
-                  shufflableActivities.includes(entry.activity) == false
+                  entry.smo == smo.name
                 );
               })
-            )
-              return;
 
             // exclude session if not assignable to this SMO
-            if (!smoStore.isAllowedTimeSMO(date, time, smo.name)) return;
+            if (!fixedEntry && !smoStore.isAllowedTimeSMO(date, time, smo.name)) return;
 
             // choose a random (?allowable) activity
             const entry = {
               date,
               time,
               smo: smo.name,
-              activity: getRandomElement(smo.activities.filter((activity) => shufflableActivities.includes(activity))) || 'UnknownActivity',
+              activity: fixedEntry?.activity || getRandomElement(smo.activities.filter((activity) => shufflableActivities.includes(activity))) || 'UndefinedActivity',
               version: 'anneal',
               cost: 0,
               oldcost: 0,
@@ -248,7 +247,6 @@ export default defineComponent({
       let sessionsCost = 0;
       let daysCost = 0;
       let weeksCost = 0;
-      debugger;
       Object.values(sol.weeks).forEach((week) => {
         Object.values(week.dates).forEach((day) => {
           (['AM', 'PM'] as Array<Time>).forEach((time) => {
@@ -268,10 +266,11 @@ export default defineComponent({
         calcWeekActivityCount(week);
         weeksCost += getWeekCost(week);
       });
-      // console.log(entriesCost, sessionsCost, daysCost, weeksCost);
+      console.log(sol, entriesCost, sessionsCost, daysCost, weeksCost);
       const totalCost = entriesCost + sessionsCost + daysCost + weeksCost;
       sol.oldcost = sol.cost;
       sol.cost = totalCost;
+
     };
 
     const calcAnnealParams = () => {
@@ -337,7 +336,7 @@ export default defineComponent({
 
           swap(sol, a, b);
 
-          if (getDeltaCost(sol) <= 0) {
+          if (getDeltaCost(sol) < 0) {
             // keep swap
             numlowercost++;
           } else {
@@ -407,6 +406,7 @@ export default defineComponent({
         const session = day[time];
         if (!session) continue;
         const entry = getRandomElement(session.entries);
+        if (entry && !shufflableActivities.includes(entry.activity)) continue;
 
         if (entry)
           return {
@@ -450,22 +450,6 @@ export default defineComponent({
       getDayCost(b.day);
       getWeekCost(a.week);
       getWeekCost(b.week);
-
-      // console.log('Postswap');
-      // console.log(
-      //   'a.entry: ',
-      //   a.entry.smo,
-      //   a.entry.activity,
-      //   a.entry.cost,
-      //   this.getDeltaCost(a.entry)
-      // );
-      // console.log(
-      //   'b.entry: ',
-      //   b.entry.smo,
-      //   b.entry.activity,
-      //   b.entry.cost,
-      //   this.getDeltaCost(b.entry)
-      // );
 
       sol.oldcost = sol.cost;
       sol.cost +=
@@ -529,23 +513,19 @@ export default defineComponent({
 
     const getTimespanCost = (
       timespan: CostWeek | CostDate | CostSession,
-      rule: string
+      ruleName: RuleName
     ) => {
       let cost = 0;
       Object.keys(timespan.activityCount).forEach((activityName) => {
-        const activity = activityStore.getActivity(activityName) as Record<
-          string,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          any
-        >;
-        if (activity && activity[rule]) {
-          if (Array.isArray(activity.rule)) {
-            if (timespan.activityCount[activityName] < activity.rule[0])
+        const rule = activityStore.getActivityRule(activityName, ruleName);
+        if (rule) {
+          if (Array.isArray(rule)) {
+            if (timespan.activityCount[activityName] < rule[0])
               cost = cost + 1;
-            if (timespan.activityCount[activityName] > activity.rule[1])
+            if (timespan.activityCount[activityName] > rule[1])
               cost = cost + 1;
           } else {
-            if (timespan.activityCount[activityName] != activity.rule)
+            if (timespan.activityCount[activityName] != rule)
               cost = cost + 1;
           }
         }
@@ -556,7 +536,7 @@ export default defineComponent({
     const calcSessionActivityCount = (session: CostSession) => {
       const activityCount = session.activityCount;
       session.entries.forEach((entry) => {
-        if (activityCount[entry.activity])
+        if (entry.activity in activityCount)
           activityCount[entry.activity] = activityCount[entry.activity] + 1;
       });
     }

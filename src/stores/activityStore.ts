@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 // import { activityData } from './data/activityData';
-import { ActivityDefinition, Time } from './models';
+import { ActivityDefinition, RuleName, Time } from './models';
 import { parseRRule, isSameDay } from './utils';
 
 import { query, collection, getFirestore, getDocs } from 'firebase/firestore';
@@ -106,6 +106,12 @@ export const useActivityStore = defineStore('activity', {
       );
       // if (!activity) throw new Error(`Activity ${activityName} is not defined`);
       return activity;
+    },
+
+    getActivityRule(activityName: string, ruleName: RuleName) {
+      const activity = this.getActivity(activityName);
+      if (activity) return activity[ruleName];
+      throw new Error(`Invalid activity: ${activityName}`);
     },
 
     isAllowedActivity(date: Date, time: Time, activityName: string): boolean {
