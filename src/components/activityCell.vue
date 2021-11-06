@@ -7,6 +7,16 @@
       </div>
     </q-tooltip>
     <div :id="cellID">{{ tdContent }}</div>
+    <q-dialog>
+      <q-card>
+        <q-card-section class="row items-center">You are currently not connected to any network.</q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" color="primary" v-close-popup />
+          <q-btn flat label="Turn on Wifi" color="primary" v-close-popup />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </td>
 </template>
 
@@ -19,7 +29,7 @@ import { useSMOStore } from 'src/stores/smoStore';
 import { useActivityStore } from 'src/stores/activityStore';
 import { useRosterStore } from 'src/stores/rosterStore';
 import { useMonthStore } from 'src/stores/monthStore';
-import { Notify } from 'quasar';
+import { Notify, useQuasar } from 'quasar';
 import { gsap } from 'gsap'
 
 export default defineComponent({
@@ -52,6 +62,7 @@ export default defineComponent({
     const smoStore = useSMOStore();
     const rosterStore = useRosterStore();
     const activityStore = useActivityStore();
+    const $q = useQuasar();
 
     const { dateStr, time, activityName, isSelected, selectedSMO } = toRefs(props);
     const date = ref(new Date(dateStr.value));
@@ -146,8 +157,26 @@ export default defineComponent({
         });
         return;
       }
+
       const rosterStore = useRosterStore();
       const monthStore = useMonthStore();
+
+      const existingEntryForSMO = rosterStore.filter({ date: date.value, time: time.value, smo: smoName });
+      console.log('existing smo: ', existingEntryForSMO)
+      if (existingEntryForSMO.length) {
+        $q.dialog({
+          title: 'Warning: SMO already assigned',
+          message: `${smoName} is already assigned to ${existingEntryForSMO[0].activity}`,
+          ok: { label: 'Reassign' },
+          cancel: { label: 'Cancel' }
+        }).onOk(() => {
+          void rosterStore.setRosterEntry(existingEntryForSMO[0].id, {
+            activity: activityName.value
+          });
+        });
+        return;
+      }
+
       void rosterStore.addRosterEntry({
         date: date.value,
         time: time.value,

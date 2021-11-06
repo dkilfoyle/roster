@@ -3,8 +3,8 @@
     <q-card-section horizontal>
       <q-card-section>
         <q-input v-model="annealParams.initialCost" label="Starting Cost" readonly></q-input>
-        <q-input v-model="sol.cost" label="Running Cost" readonly></q-input>
-        <q-input v-model="annealParams.TMax" label="TMax"></q-input>
+        <q-input v-model="annealParams.runningCost" label="Running Cost" readonly></q-input>
+        <!-- <q-input v-model="annealParams.TMax" label="TMax"></q-input>
         <q-field label="Tk" stack-label>
           <q-slider v-model="annealParams.Tk" :min="0.01" :max="1.2" :step="0.01" label></q-slider>
         </q-field>
@@ -14,8 +14,19 @@
             <q-slider v-model="annealParams.alpha" :min="0.8" :max="0.99" :step="0.01" label></q-slider>
           </template>
         </q-field>
-
-        <q-input v-model="annealParams.reps" label="Iterations"></q-input>
+        <q-input v-model="annealParams.reps" label="Iterations"></q-input>-->
+        <q-field :label="`Temp Steps: ${annealParams.tempSteps}`" borderless stack-label>
+          <q-slider v-model="annealParams.tempSteps" :min="50" :max="1000" :step="10"></q-slider>
+        </q-field>
+        <q-input v-model="annealParams.swapsPerStep" label="Swaps per Step" stack-label></q-input>
+        <q-field
+          :label="`Prob Accept Start ${annealParams.probAcceptWorseStart}`"
+          borderless
+          stack-label
+        >
+          <q-slider v-model="annealParams.probAcceptWorseStart" :min="0" :max="1" :step="0.01"></q-slider>
+        </q-field>
+        <q-input v-model="annealParams.probAcceptWorseEnd" label="Prob Accept End" stack-label></q-input>
       </q-card-section>
       <q-separator vertical inset></q-separator>
       <q-card-section class="col">
@@ -33,7 +44,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed, ref, reactive, onMounted, watch } from 'vue';
+import { defineComponent, computed, ref, reactive, onMounted } from 'vue';
 import { LineChart, useLineChart } from 'vue-chart-3';
 import { Chart, ChartData, ChartOptions, registerables } from 'chart.js';
 import {
@@ -47,6 +58,7 @@ import {
   CostWeek,
   ActivityDefinition,
   RuleName,
+  RosterEntry,
 } from 'src/stores/models';
 
 import { useRosterStore } from 'src/stores/rosterStore';
@@ -55,6 +67,7 @@ import { useMonthStore } from 'src/stores/monthStore';
 import { useSMOStore } from 'src/stores/smoStore';
 import { useStore } from 'src/stores/store';
 import { getWeek, format } from 'date-fns';
+import { date } from 'quasar';
 Chart.register(...registerables);
 
 export default defineComponent({
@@ -70,21 +83,32 @@ export default defineComponent({
     const store = useStore();
 
     const annealParams = reactive({
-      TMax: 1,
-      TMin: 0.00001,
-      Tk: 0.8,
-      alpha: 0.9,
-      reps: 100,
-      xmax: 100,
+      // TMax: 1,
+      // TMin: 0.00001,
+      // Tk: 0.8,
+      // alpha: 0.9,
+      // reps: 100,
+      // xmax: 100,
       state: 'uninit',
       initialCost: 0,
-      finalCost: 0,
+      runningCost: 0,
+      tempSteps: 100,
+      swapsPerStep: 100,
+      probAcceptWorseStart: 0.7,
+      probAcceptWorseEnd: 0.001,
     });
 
+    const round = (x: number, digits: number) => Number(x.toFixed(digits));
+
+    const tempStart = computed(() => -1.0 / Math.log(annealParams.probAcceptWorseStart));
+    const tempEnd = computed(() => -1.0 / Math.log(annealParams.probAcceptWorseEnd));
+    const tempAlpha = computed(() => (tempEnd.value / tempStart.value) ** (1.0 / (annealParams.tempSteps - 1)));
+
+
     onMounted(() => initAnneal());
-    watch(() => annealParams.Tk, (newVal) => {
-      annealParams.TMax = Number((annealParams.initialCost * newVal).toFixed(1));
-    });
+    // watch(() => annealParams.Tk, (newVal) => {
+    //   annealParams.TMax = Number((annealParams.initialCost * newVal).toFixed(1));
+    // });
 
     const annealCost = ref(Array<number>());
     const annealTemp = ref(Array<number>());
@@ -128,8 +152,9 @@ export default defineComponent({
         maintainAspectRatio: false,
         scales: {
           x: {
-            max: Math.log(annealParams.TMin / annealParams.TMax) /
-              Math.log(annealParams.alpha),
+            // max: Math.log(annealParams.TMin / annealParams.TMax) /
+            //   Math.log(annealParams.alpha),
+            max: annealParams.tempSteps,
             min: 0,
             type: 'linear',
             steps: 10
@@ -137,7 +162,7 @@ export default defineComponent({
           },
           y: {
             max: annealParams.initialCost * 1.2,
-            min: 0
+            min: 0,
           },
           y2: {
             max: 101,
@@ -167,7 +192,8 @@ export default defineComponent({
         activity.name != 'Call' &&
         activity.name != 'RT' &&
         activity.name != 'CRS_GP' &&
-        activity.name != 'CRS_ACT'
+        activity.name != 'CRS_ACT' &&
+        activity.name != 'MAN'
     }
 
     const shufflableActivities = activityStore.activities
@@ -181,6 +207,7 @@ export default defineComponent({
       monthStore.dates.forEach((date) => {
         if (store.isHoliday(date)) return;
         smoStore.activeSMOs.forEach((smo) => {
+          if (smo.name == 'AM') return; // don't assign for AM as can work any day
           (['AM', 'PM'] as Array<Time>).forEach((time) => {
 
             //  shufflable - no longer, now include for costing but exclude from shuffle
@@ -275,8 +302,8 @@ export default defineComponent({
 
     const calcAnnealParams = () => {
       annealParams.initialCost = sol.cost;
-      annealParams.TMax = Number((sol.cost * annealParams.Tk).toFixed(4));
-      annealParams.TMin = Number((annealParams.TMax * 0.00001).toFixed(4));
+      // annealParams.TMax = Number((sol.cost * annealParams.Tk).toFixed(4));
+      // annealParams.TMin = Number((annealParams.TMax * 0.00001).toFixed(4));
       annealParams.state = 'ready';
     };
 
@@ -302,9 +329,12 @@ export default defineComponent({
       buildRandomSolution();
       calcCost();
       calcAnnealParams();
+      console.log(tempStart.value, tempEnd.value, tempAlpha.value)
     };
 
     const doAnneal = () => {
+
+
 
       annealCost.value.splice(0, annealCost.value.length);
       annealTemp.value.splice(0, annealTemp.value.length);
@@ -316,68 +346,74 @@ export default defineComponent({
       );
       annealAcceptedLowerCost.value.splice(0, annealAcceptedLowerCost.value.length);
 
-      let T = annealParams.TMax;
-      const T_min = annealParams.TMin;
-      const alpha = annealParams.alpha;
-      let frame = 0;
+      // let T = annealParams.TMax;
+      // const T_min = annealParams.TMin;
+      // const alpha = annealParams.alpha;
+      let step = 1;
+      let t = tempStart.value;
+      let numaccepted = 1; // the initial solution
 
       annealParams.state = 'running';
+      let deltaCost_avg = 0;
 
-      const doFrame = () => {
-        let i = 1;
-        frame++;
-        // console.log(`T=${T.toFixed(3)}: StartCost=${sol.cost}`);
-        let numlowercost = 0;
-        let numhighercost = 0;
-        let numrejected = 0;
-        while (i <= annealParams.reps) {
+      annealCost.value.push(sol.cost);
+      annealTemp.value.push(t);
+      annealTempStep.value.push(step);
+      annealAccepted.value.push(numaccepted)
+
+      const doTempStep = () => {
+        let i = 0;
+        numaccepted = 0;
+
+        while (i <= annealParams.swapsPerStep) {
           const a = getRandomEntry(sol);
           const b = getRandomEntry(sol);
+          let accept = false;
 
           swap(sol, a, b);
 
-          if (getDeltaCost(sol) < 0) {
-            // keep swap
-            numlowercost++;
+          const deltaCost = Math.abs(getDeltaCost(sol));
+
+          if (sol.cost > sol.oldcost) {
+            // worse solution
+
+            // if first swap init deltaCost_avg to abs(cost)
+            if (step == 1 && i == 0) deltaCost_avg = deltaCost;
+            const p = Math.exp(-deltaCost / (deltaCost_avg * t));
+            accept = p > Math.random();
           } else {
-            const ap = acceptance_probability(sol.oldcost, sol.cost, T);
-            // console.log(
-            //   'ap: ',
-            //   ap,
-            //   sol.oldcost,
-            //   sol.cost,
-            //   this.getDeltaCost(sol)
-            // );
-            if (ap > Math.random()) {
-              // keep swap despite higher cost
-              // console.log('keep despite higher cost');
-              numhighercost++;
-            } else {
-              // reject swap, revert to pre swap
-              // console.log('reject');
-              numrejected++;
-              unswap(sol, a, b);
-            }
+            // better or equal solution
+            accept = true;
+          }
+
+          if (accept) {
+            numaccepted++;
+            deltaCost_avg = (deltaCost_avg * (numaccepted - 1.0) + deltaCost) / numaccepted;
+          } else {
+            // swap rejected
+            // reverse swap
+            unswap(sol, a, b);
           }
 
           i += 1;
         }
+
         annealCost.value.push(sol.cost);
-        annealTemp.value.push(T);
-        annealTempStep.value.push(frame);
-        annealAccepted.value.push(numhighercost + numlowercost)
-        T = T * alpha;
-        if ((T > T_min) && annealParams.state == 'running') requestAnimationFrame(doFrame); else {
+        annealTemp.value.push(t);
+        annealTempStep.value.push(step);
+        annealAccepted.value.push(numaccepted / annealParams.swapsPerStep * 100)
+        annealParams.runningCost = sol.cost;
+
+        step++;
+        t = t * tempAlpha.value;
+
+        if ((t > tempEnd.value) && annealParams.state == 'running') requestAnimationFrame(doTempStep); else {
           annealParams.state = 'ready';
-          annealParams.finalCost = sol.cost;
-          console.log(
-            `-- EndCost: ${sol.cost}`
-          );
         }
       }
 
-      requestAnimationFrame(doFrame);
-
+      requestAnimationFrame(doTempStep);
+      console.log(sol);
     };
 
     const getZeroActivityCount = () => {
@@ -436,7 +472,7 @@ export default defineComponent({
       a.day.activityCount[a.entry.activity] += 1;
       b.day.activityCount[b.entry.activity] += 1;
       a.week.activityCount[a.entry.activity] += 1;
-      b.week.activityCount[b.entry.activity] -= 1;
+      b.week.activityCount[b.entry.activity] += 1;
     }
 
     const swap = (sol: CostMonth, a: Costs, b: Costs) => {
@@ -476,13 +512,13 @@ export default defineComponent({
       b.entry.cost = b.entry.oldcost;
     };
 
-    const acceptance_probability = (
-      old_cost: number,
-      new_cost: number,
-      T: number
-    ) => {
-      return Math.exp(-(new_cost - old_cost) / T);
-    };
+    // const acceptance_probability = (
+    //   old_cost: number,
+    //   new_cost: number,
+    //   T: number
+    // ) => {
+    //   return Math.exp(-(new_cost - old_cost) / T);
+    // };
 
     const getDeltaCost = (timespan: Cost) => {
       return timespan.cost - timespan.oldcost;
@@ -582,9 +618,24 @@ export default defineComponent({
     };
 
     const exportAnneal = () => {
-      console.log('exportAnneal - TODO')
+      Object.values(sol.weeks).forEach(week => {
+        Object.values(week.dates).forEach(date => {
+          let entries = Array<CostEntry>();
+          if (date.AM) entries = entries.concat(date.AM.entries);
+          if (date.PM) entries = entries.concat(date.PM.entries);
+          entries.forEach(entry => {
+            rosterStore.addTempRosterEntry({
+              date: entry.date,
+              time: entry.time,
+              smo: entry.smo,
+              activity: entry.activity,
+              version: entry.version + '_solution',
+              notes: ''
+            })
+          })
+        })
+      })
     }
-
 
     return {
       lineChartProps, exportAnneal, annealLabel, annealClick, annealParams, emit, sol, initAnneal

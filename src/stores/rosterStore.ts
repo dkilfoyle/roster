@@ -74,9 +74,17 @@ export const useRosterStore = defineStore('roster', {
       return this.monthEntriesLookup[id] || [];
     },
 
+    getSearchEntries(searchCriteria: SearchRosterEntry, curMonth: boolean) {
+      if (!curMonth) return this.allEntries;
+      else if (searchCriteria.date && searchCriteria.time)
+        return this.getRosterAtTime(searchCriteria.date, searchCriteria.time);
+      else return this.monthEntries;
+    },
+
     filter(searchCriteria: SearchRosterEntry, curMonth = true) {
+      const searchEntries = this.getSearchEntries(searchCriteria, curMonth);
       return (
-        (curMonth ? this.monthEntries : this.allEntries).filter((entry) => {
+        searchEntries.filter((entry) => {
           if (
             (searchCriteria.version &&
               entry.version != searchCriteria.version) ||
@@ -93,7 +101,7 @@ export const useRosterStore = defineStore('roster', {
     },
 
     exists(searchCriteria: SearchRosterEntry, curMonth = true) {
-      const searchEntries = curMonth ? this.monthEntries : this.allEntries;
+      const searchEntries = this.getSearchEntries(searchCriteria, curMonth);
       return searchEntries.some((entry) => {
         if (
           (searchCriteria.version && entry.version != searchCriteria.version) ||
@@ -175,6 +183,12 @@ export const useRosterStore = defineStore('roster', {
       this.$patch((state) => {
         state.allEntries.push(...newEntries);
       });
+    },
+
+    addTempRosterEntry(entry: RosterData) {
+      // add without saving to firestore
+      const newEntryDocRef = doc(collection(getFirestore(), 'roster'));
+      this.allEntries.push({ ...entry, id: newEntryDocRef.id });
     },
 
     async addRosterEntry(entry: RosterData) {

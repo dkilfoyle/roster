@@ -3,61 +3,43 @@
     <q-header elevated>
       <q-toolbar>
         <div class="col row items-center">
-          <q-btn
-            flat
-            dense
-            round
-            icon="menu"
-            aria-label="Menu"
-            @click="toggleLeftDrawer"
-          />
+          <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
 
           <q-separator dark vertical inset />
 
-          <div style="padding-left: 10px; font-size: 18px">
-            Neurology Roster
-          </div>
+          <div style="padding-left: 10px; font-size: 18px">Neurology Roster</div>
         </div>
 
         <div class="col row justify-center" style="text-align: center">
-          <q-btn
-            flat
-            round
-            size="md"
-            @click="monthStore.setPrevMonth()"
-            icon="navigate_before"
-          ></q-btn>
+          <q-btn flat round size="md" @click="monthStore.setPrevMonth()" icon="navigate_before"></q-btn>
           <div class="column col-auto justify-center">
-            <div class="col-auto" style="color: cyan">
-              {{ monthStore.monthName }}
-            </div>
-            <div
-              class="col"
-              v-if="monthStore.version != 'Final'"
-              style="color: greenyellow"
-            >
-              {{ monthStore.version }}
+            <div class="col-auto" style="color: cyan">{{ monthStore.monthName }}</div>
+            <div class="col" v-if="!monthStore.isArchived" style="color: greenyellow">
+              <q-btn flat size="sm" :label="monthStore.version">
+                <q-menu>
+                  <q-list>
+                    <q-item
+                      v-for="version in rosterStore.monthVersions"
+                      :key="version"
+                      @click="monthStore.version = version"
+                      clickable
+                      v-close-popup
+                    >
+                      <q-item-section>{{ version }}</q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-menu>
+              </q-btn>
             </div>
           </div>
 
-          <q-btn
-            flat
-            round
-            size="md"
-            @click="monthStore.setNextMonth()"
-            icon="navigate_next"
-          ></q-btn>
+          <q-btn flat round size="md" @click="monthStore.setNextMonth()" icon="navigate_next"></q-btn>
         </div>
 
         <div class="col">
           <q-tabs inline-label class="float-right">
             <q-route-tab icon="person" to="/smoPage" label="SMO View" exact />
-            <q-route-tab
-              icon="directions_run"
-              to="/activityPage"
-              label="Activity View"
-              exact
-            />
+            <q-route-tab icon="directions_run" to="/activityPage" label="Activity View" exact />
           </q-tabs>
         </div>
       </q-toolbar>
@@ -137,6 +119,7 @@ import smoOptions from '../components/smoOptions.vue';
 import monthOptions from '../components/monthOptions.vue';
 import userOptions from '../components/userOptions.vue';
 import summaryOptions from '../components/summaryOptions.vue';
+import { useRosterStore } from 'src/stores/rosterStore';
 
 export default defineComponent({
   name: 'MainLayout',
@@ -162,6 +145,7 @@ export default defineComponent({
       store,
       monthStore,
       router,
+      rosterStore: useRosterStore()
     };
   },
 });

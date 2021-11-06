@@ -248,10 +248,10 @@ export default defineComponent({
     const setSelectedCellsToSMO = (smoName: string) => {
       // add this SMO to each selected cell
       selectedCells.forEach((cell) => {
-        if (rosterStore.exists({ date: cell.date, time: cell.time, smo: smoName, activity: cell.activityName, version: monthStore.version })) {
+        if (rosterStore.exists({ date: cell.date, time: cell.time, smo: smoName })) {
           Notify.create({
-            message: 'Warning',
-            caption: `${smoName} is already assigned to ${cell.date.toDateString()} ${cell.time}`,
+            message: 'Warning: Skipped assignment',
+            caption: `${smoName} is already assigned to another activity on ${cell.date.toDateString()} ${cell.time}`,
             position: 'bottom-right',
           });
         } else {
