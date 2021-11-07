@@ -186,27 +186,20 @@ export const useStore = defineStore('main', {
       await rosterStore.delRosterEntries(ids);
     },
 
-    generateNCTandCRS() {
+    generateRegularEntries() {
       // run only when creating new month otherwise
-      console.log(
-        'Warning: compile SMOs will reset any existing NCT times back to NCT default'
-      );
       const smoStore = useSMOStore();
       const monthStore = useMonthStore();
       const rosterStore = useRosterStore();
 
       smoStore
         .getNCTEntries(monthStore.startDate, monthStore.endDate)
-        .forEach((entry) => {
-          void rosterStore.addRosterEntry({
-            ...entry,
-            notes: '',
-            version: monthStore.version,
-          });
-        });
-
-      smoStore
-        .getCRSEntries(monthStore.startDate, monthStore.endDate)
+        .concat(
+          smoStore.getRegularEntries(monthStore.startDate, monthStore.endDate)
+        )
+        .concat(
+          smoStore.getCRSEntries(monthStore.startDate, monthStore.endDate)
+        )
         .forEach((entry) => {
           void rosterStore.addRosterEntry({
             ...entry,
@@ -476,7 +469,9 @@ export const useStore = defineStore('main', {
         const activityName = assignedActivitiesNoCall[0].activity;
         if (
           !smos.isAllowedTimeSMO(date, time, smoName) &&
-          !['NCT', 'WDHB', 'CDHB', 'UNI', 'Call'].includes(activityName)
+          !['NCT', 'WDHB', 'CDHB', 'UNI', 'Call', 'MAN', 'ANL', 'CME'].includes(
+            activityName
+          )
         ) {
           result.reasons.push(`${smoName} is not contracted`);
         }

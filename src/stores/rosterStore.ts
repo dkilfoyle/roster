@@ -100,6 +100,22 @@ export const useRosterStore = defineStore('roster', {
       );
     },
 
+    find(searchCriteria: SearchRosterEntry, curMonth = true) {
+      const searchEntries = this.getSearchEntries(searchCriteria, curMonth);
+      return searchEntries.find((entry) => {
+        if (
+          (searchCriteria.version && entry.version != searchCriteria.version) ||
+          (searchCriteria.time && entry.time != searchCriteria.time) ||
+          (searchCriteria.smo && entry.smo != searchCriteria.smo) ||
+          (searchCriteria.activity &&
+            entry.activity != searchCriteria.activity) ||
+          (searchCriteria.date && !isSameDay(entry.date, searchCriteria.date))
+        )
+          return false;
+        return true;
+      });
+    },
+
     exists(searchCriteria: SearchRosterEntry, curMonth = true) {
       const searchEntries = this.getSearchEntries(searchCriteria, curMonth);
       return searchEntries.some((entry) => {
@@ -204,7 +220,9 @@ export const useRosterStore = defineStore('roster', {
     async setRosterEntry(id: string, setEntry: SetRosterEntry) {
       const found = this.allEntries.find((entry) => entry.id == id);
       if (found) {
+        // console.log(`setRosterEntry: ${id}`, setEntry);
         if (setEntry.activity) found.activity = setEntry.activity;
+        if (setEntry.smo) found.smo = setEntry.smo;
         if (setEntry.notes) found.notes = setEntry.notes;
         if (setEntry.version) found.version = setEntry.version;
         const entryRef = doc(getFirestore(), 'roster', found.id);

@@ -217,7 +217,7 @@ export default defineComponent({
           holiday: isHoliday.value,
           nct:
             assignedActivities.value.length &&
-            ['WDHB', 'NCT', 'UNI', 'CDHB', 'A+T'].includes(
+            ['WDHB', 'NCT', 'UNI', 'CDHB', 'A+T', 'MAN'].includes(
               assignedActivities.value[0]
             ),
           note: tdHasNotes.value,

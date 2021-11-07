@@ -58,7 +58,6 @@ import {
   CostWeek,
   ActivityDefinition,
   RuleName,
-  RosterEntry,
 } from 'src/stores/models';
 
 import { useRosterStore } from 'src/stores/rosterStore';
@@ -67,7 +66,7 @@ import { useMonthStore } from 'src/stores/monthStore';
 import { useSMOStore } from 'src/stores/smoStore';
 import { useStore } from 'src/stores/store';
 import { getWeek, format } from 'date-fns';
-import { date } from 'quasar';
+import { random } from 'gsap/all';
 Chart.register(...registerables);
 
 export default defineComponent({
@@ -98,7 +97,7 @@ export default defineComponent({
       probAcceptWorseEnd: 0.001,
     });
 
-    const round = (x: number, digits: number) => Number(x.toFixed(digits));
+    // const round = (x: number, digits: number) => Number(x.toFixed(digits));
 
     const tempStart = computed(() => -1.0 / Math.log(annealParams.probAcceptWorseStart));
     const tempEnd = computed(() => -1.0 / Math.log(annealParams.probAcceptWorseEnd));
@@ -193,24 +192,44 @@ export default defineComponent({
         activity.name != 'RT' &&
         activity.name != 'CRS_GP' &&
         activity.name != 'CRS_ACT' &&
-        activity.name != 'MAN'
+        activity.name != 'MAN' &&
+        activity.name != 'WDHB' &&
+        activity.name != 'CMDHB'
     }
 
     const shufflableActivities = activityStore.activities
       .filter(isShufflable)
-      .map((x) => x.name);
+    const shufflableActivityNames = shufflableActivities.map(x => x.name);
+
     const sol: CostMonth = { cost: 0, oldcost: 0, weeks: {} };
 
     const buildRandomSolution = () => {
       // build initial solution
       // fill sol with appropriate dates,times,smos excluding any unchangeable sessions such as leave/ward with random activity
+
+      // calculate the number of each shufflable activity required for the whole month
+      const activities = shufflableActivities.map((activity) => {
+        if (activity.perWeek) return { activity: activity.name, num: Math.ceil((Array.isArray(activity.perWeek) ? activity.perWeek[0] : activity.perWeek) * monthStore.numWeeks) };
+        if (activity.perDay) return { activity: activity.name, num: (Array.isArray(activity.perDay) ? activity.perDay[0] : activity.perDay) * monthStore.numWorkingDays };
+        return { activity: activity.name, num: 0 }
+      }).sort((a, b) => a.num - b.num);
+
+      const activitiesSetNumber = activities.filter(x => x.num > 0);
+      const activitiesAnyNumber = activities.filter(x => x.num == 0).map(x => x.activity);
+      let activitiesToAssign = Array<string>();
+
+      activitiesSetNumber.forEach(activity => {
+        activitiesToAssign = activitiesToAssign.concat(Array(activity.num).fill(activity.activity))
+      });
+
+      let randomActivityNum = 0;
       monthStore.dates.forEach((date) => {
         if (store.isHoliday(date)) return;
         smoStore.activeSMOs.forEach((smo) => {
           if (smo.name == 'AM') return; // don't assign for AM as can work any day
           (['AM', 'PM'] as Array<Time>).forEach((time) => {
 
-            //  shufflable - no longer, now include for costing but exclude from shuffle
+            // any pre-existing entries in roster month are considered fixed - they won't be selected for shuffling but are included for costing
             const fixedEntry =
               rosterStore.getRosterAtTime(date, time).find((entry) => {
                 return (
@@ -226,11 +245,14 @@ export default defineComponent({
               date,
               time,
               smo: smo.name,
-              activity: fixedEntry?.activity || getRandomElement(smo.activities.filter((activity) => shufflableActivities.includes(activity))) || 'UndefinedActivity',
+              activity: fixedEntry?.activity || (randomActivityNum < activitiesToAssign.length ? activitiesToAssign[randomActivityNum++] : getRandomElement(activitiesAnyNumber)) || 'UnknownActivity',
               version: 'anneal',
               cost: 0,
               oldcost: 0,
+              fixed: typeof fixedEntry != 'undefined'
             };
+
+            randomActivityNum++;
 
             const dateStr = 'D' + format(date, 'yyyyMMdd');
             const week = getWeek(date) - getWeek(monthStore.startDate);
@@ -419,7 +441,7 @@ export default defineComponent({
     const getZeroActivityCount = () => {
       const activityCount: Record<string, number> = {};
       shufflableActivities.forEach((activity) => {
-        activityCount[activity] = 0;
+        activityCount[activity.name] = 0;
       });
       return activityCount;
     };
@@ -442,7 +464,7 @@ export default defineComponent({
         const session = day[time];
         if (!session) continue;
         const entry = getRandomElement(session.entries);
-        if (entry && !shufflableActivities.includes(entry.activity)) continue;
+        if (entry && (entry.fixed || !shufflableActivityNames.includes(entry.activity))) continue;
 
         if (entry)
           return {
@@ -630,7 +652,7 @@ export default defineComponent({
               smo: entry.smo,
               activity: entry.activity,
               version: entry.version + '_solution',
-              notes: ''
+              notes: entry.cost > 0 ? entry.cost.toString() : ''
             })
           })
         })

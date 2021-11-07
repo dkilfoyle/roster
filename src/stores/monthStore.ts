@@ -4,8 +4,10 @@ import {
   eachDayOfInterval,
   isWeekend,
   differenceInWeeks,
+  isSameDay,
 } from 'date-fns';
 import { defineStore } from 'pinia';
+import { holidays } from './holidays';
 import { getFirstMonday } from './utils';
 
 export const useMonthStore = defineStore('month', {
@@ -16,6 +18,7 @@ export const useMonthStore = defineStore('month', {
     endDate: new Date(),
     dates: Array<Date>(),
     numWeeks: 1,
+    numWorkingDays: 1,
     showWeekend: false,
     version: 'Final',
   }),
@@ -47,10 +50,15 @@ export const useMonthStore = defineStore('month', {
         end: endDate,
       }).filter((date) => this.showWeekend || !isWeekend(date));
 
+      const numWorkingDays = dates.filter(
+        (date) => !holidays.some((holiday) => isSameDay(holiday, date))
+      ).length;
+
       this.$patch({
         startDate,
         endDate,
         numWeeks,
+        numWorkingDays,
         dates,
         version: 'Final',
       });

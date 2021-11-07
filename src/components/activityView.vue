@@ -156,7 +156,7 @@ import { useRosterStore } from 'src/stores/rosterStore';
 import activityCell from './activityCell.vue';
 import { format, isSameDay } from 'date-fns';
 import { ActivityCellDefinition, SMODefinition, Time } from 'src/stores/models';
-import { Notify } from 'quasar';
+import { useQuasar } from 'quasar';
 import { gsap } from 'gsap'
 
 export default defineComponent({
@@ -168,6 +168,7 @@ export default defineComponent({
     const monthStore = useMonthStore();
     const smoStore = useSMOStore();
     const rosterStore = useRosterStore();
+    const $q = useQuasar();
 
     // Selected Cells ===================================
 
@@ -247,25 +248,46 @@ export default defineComponent({
 
     const setSelectedCellsToSMO = (smoName: string) => {
       // add this SMO to each selected cell
-      selectedCells.forEach((cell) => {
-        if (rosterStore.exists({ date: cell.date, time: cell.time, smo: smoName })) {
-          Notify.create({
-            message: 'Warning: Skipped assignment',
-            caption: `${smoName} is already assigned to another activity on ${cell.date.toDateString()} ${cell.time}`,
-            position: 'bottom-right',
-          });
-        } else {
-          void rosterStore.addRosterEntry({
-            date: cell.date,
-            time: cell.time,
-            smo: smoName,
-            activity: cell.activityName,
-            notes: '',
-            version: monthStore.version,
-          });
-        };
+      // is SMO already assigned on the selected sessions
+      const alreadyAssignedNotCall = selectedCells.filter((cell) => cell.activityName != 'Call' && rosterStore.exists({ date: cell.date, time: cell.time, smo: smoName }));
+      const unAssigned = selectedCells.filter((cell) => cell.activityName == 'Call' || !rosterStore.exists({ date: cell.date, time: cell.time, smo: smoName }));
+      const alreadyAssignedEntries = alreadyAssignedNotCall.map((cell) => rosterStore.find({ date: cell.date, time: cell.time, smo: smoName }));
+
+      if (alreadyAssignedNotCall.length > 0) {
+        $q.dialog({
+          title: 'Warning: SMO already assigned',
+          message: `This will replace already assigned activities: ${alreadyAssignedEntries.map((entry) => entry?.activity || '').join(',')}`,
+          ok: { label: 'Proceed' },
+          cancel: { label: 'Cancel' }
+        }).onCancel(() => {
+          clearSelection();
+          smoButton.value = '';
+          return;
+        }).onOk(() => {
+          alreadyAssignedNotCall.forEach((cell) => {
+            if (cell) {
+              const entry = rosterStore.find({ date: cell.date, time: cell.time, smo: smoName });
+              if (entry)
+                void rosterStore.setRosterEntry(entry.id, { activity: cell.activityName })
+            }
+          })
+        })
+      }
+
+      unAssigned.forEach((cell) => {
+        void rosterStore.addRosterEntry({
+          date: cell.date,
+          time: cell.time,
+          smo: smoName,
+          activity: cell.activityName,
+          notes: '',
+          version: monthStore.version,
+        });
         gsap.from(`#${cell.id}`, { duration: 1.0, background: 'red' });
       });
+
+
+
       clearSelection();
       smoButton.value = '';
     }

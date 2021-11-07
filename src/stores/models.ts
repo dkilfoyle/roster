@@ -23,6 +23,7 @@ export interface SearchRosterEntry {
   version?: string;
 }
 export interface SetRosterEntry {
+  smo?: string;
   activity?: string;
   notes?: string;
   version?: string;
@@ -94,6 +95,7 @@ export interface SMODefinition {
   endDate: Date | null;
   activities: Array<string>;
   NCT: Array<ActivityDefinition>;
+  regular?: Array<ActivityDefinition>;
   allowedDates?: {
     AM: Array<Date>;
     PM: Array<Date>;
@@ -122,6 +124,7 @@ export interface CostEntry extends Cost {
   smo: string;
   activity: string;
   version: string;
+  fixed: boolean;
 }
 
 export interface CostSession extends Cost {

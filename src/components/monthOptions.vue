@@ -133,11 +133,11 @@
     <q-btn
       color="secondary"
       :disable="monthStore.isArchived"
-      @click="confirmNCT = true"
+      @click="confirmRegular = true"
       icon="update"
-      label="Load NCT and CRS"
+      label="Load Regular"
     ></q-btn>
-    <q-dialog v-model="confirmNCT" persistent>
+    <q-dialog v-model="confirmRegular" persistent>
       <q-card>
         <q-card-section>
           <div class="text-h6">Warning</div>
@@ -145,7 +145,7 @@
 
         <q-card-section
           class="q-pt-none"
-        >Generating NCT will overwrite any existing entries in the current month</q-card-section>
+        >Generating regular sessions (NCT, CRS etc) will overwrite any existing entries in the current month</q-card-section>
 
         <q-card-actions align="right">
           <q-btn flat label="Cancel" color="primary" v-close-popup />
@@ -153,7 +153,7 @@
             flat
             label="Confirm"
             color="primary"
-            @click="store.generateNCTandCRS"
+            @click="store.generateRegularEntries"
             v-close-popup
           />
         </q-card-actions>
@@ -195,7 +195,7 @@ export default defineComponent({
     const smoStore = useSMOStore();
 
     const state = reactive({
-      confirmNCT: false,
+      confirmRegular: false,
       newVersion: false,
       finaliseVersion: false,
       deleteVersion: false,

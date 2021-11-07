@@ -235,6 +235,36 @@ export const useSMOStore = defineStore('smo', {
       });
       return entries;
     },
+    getRegularEntries(startDate: Date, endDate: Date) {
+      const entries = Array<RosterData>();
+      this.activeSMOs.forEach((smo) => {
+        if (smo.regular)
+          smo.regular.forEach((regular) => {
+            parseRRule(regular.AM, startDate, endDate).forEach((date) =>
+              entries.push({
+                date,
+                time: 'AM',
+                smo: smo.name,
+                activity: regular.name,
+                notes: '',
+                version: '',
+              })
+            );
+            parseRRule(regular.PM, startDate, endDate).forEach((date) =>
+              entries.push({
+                date,
+                time: 'PM',
+                smo: smo.name,
+                activity: regular.name,
+                notes: '',
+                version: '',
+              })
+            );
+          });
+      });
+      return entries;
+    },
+
     getCRSEntries(startDate: Date, endDate: Date) {
       const entries = Array<RosterData>();
       this.activeSMOs.forEach((smo) => {
