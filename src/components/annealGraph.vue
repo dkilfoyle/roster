@@ -58,6 +58,7 @@ import {
   CostWeek,
   ActivityDefinition,
   RuleName,
+  Solution,
 } from 'src/stores/models';
 
 import { useRosterStore } from 'src/stores/rosterStore';
@@ -66,7 +67,6 @@ import { useMonthStore } from 'src/stores/monthStore';
 import { useSMOStore } from 'src/stores/smoStore';
 import { useStore } from 'src/stores/store';
 import { getWeek, format } from 'date-fns';
-import { random } from 'gsap/all';
 Chart.register(...registerables);
 
 export default defineComponent({
@@ -189,38 +189,48 @@ export default defineComponent({
         activity.name != 'CRS' &&
         activity.name != 'NCT' &&
         activity.name != 'Call' &&
-        activity.name != 'RT' &&
+        // activity.name != 'RT' &&
         activity.name != 'CRS_GP' &&
         activity.name != 'CRS_ACT' &&
         activity.name != 'MAN' &&
         activity.name != 'WDHB' &&
-        activity.name != 'CMDHB'
+        activity.name != 'CDHB'
     }
 
     const shufflableActivities = activityStore.activities
       .filter(isShufflable)
     const shufflableActivityNames = shufflableActivities.map(x => x.name);
 
-    const sol: CostMonth = { cost: 0, oldcost: 0, weeks: {} };
+    const sol: Solution = { cost: 0, oldcost: 0 };
 
     const buildRandomSolution = () => {
       // build initial solution
       // fill sol with appropriate dates,times,smos excluding any unchangeable sessions such as leave/ward with random activity
 
       // calculate the number of each shufflable activity required for the whole month
-      const activities = shufflableActivities.map((activity) => {
-        if (activity.perWeek) return { activity: activity.name, num: Math.ceil((Array.isArray(activity.perWeek) ? activity.perWeek[0] : activity.perWeek) * monthStore.numWeeks) };
-        if (activity.perDay) return { activity: activity.name, num: (Array.isArray(activity.perDay) ? activity.perDay[0] : activity.perDay) * monthStore.numWorkingDays };
-        return { activity: activity.name, num: 0 }
-      }).sort((a, b) => a.num - b.num);
+      const activitiesPerMonth = shufflableActivities.map((activity) => {
+        const perWeek = activity.perWeek ? Math.ceil((Array.isArray(activity.perWeek) ? activity.perWeek[0] : activity.perWeek) * monthStore.numWeeks) : 0;
+        const perDay = activity.perDay ? (Array.isArray(activity.perDay) ? activity.perDay[0] : activity.perDay) * monthStore.numWorkingDays : 0;
+        const perMonth = activity.perMonth ? Math.ceil((Array.isArray(activity.perMonth) ? activity.perMonth[0] : activity.perMonth) * monthStore.numWeeks / 4) : 0;
+        const perSession = activity.perSession ? (Array.isArray(activity.perSession) ? activity.perSession[0] : activity.perSession) * ((activity.allowedDates?.AM.length || 0) + (activity.allowedDates?.PM.length || 0)) : 0;
+        return { activity: activity.name, num: Math.max(perSession, perDay, perWeek, perMonth), perSession, perDay, perWeek, perMonth }
+      })
 
-      const activitiesSetNumber = activities.filter(x => x.num > 0);
-      const activitiesAnyNumber = activities.filter(x => x.num == 0).map(x => x.activity);
-      let activitiesToAssign = Array<string>();
+      console.log('Activities per month: ', activitiesPerMonth)
 
-      activitiesSetNumber.forEach(activity => {
-        activitiesToAssign = activitiesToAssign.concat(Array(activity.num).fill(activity.activity))
+      let activitiesSetNumber = new Array<string>();
+      activitiesPerMonth.filter(x => x.num > 0).forEach(x => {
+        for (let i = 0; i < x.num; i++) activitiesSetNumber.push(x.activity);
       });
+      // randomize order
+      for (let i = activitiesSetNumber.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [activitiesSetNumber[i], activitiesSetNumber[j]] = [activitiesSetNumber[j], activitiesSetNumber[i]];
+      }
+
+      const activitiesAnyNumber = activitiesPerMonth.filter(x => x.num == 0).map(x => x.activity);
+
+      console.log(activitiesSetNumber);
 
       let randomActivityNum = 0;
       monthStore.dates.forEach((date) => {
@@ -245,36 +255,46 @@ export default defineComponent({
               date,
               time,
               smo: smo.name,
-              activity: fixedEntry?.activity || (randomActivityNum < activitiesToAssign.length ? activitiesToAssign[randomActivityNum++] : getRandomElement(activitiesAnyNumber)) || 'UnknownActivity',
+              activity: fixedEntry?.activity || (randomActivityNum < activitiesSetNumber.length ? activitiesSetNumber[randomActivityNum++] : getRandomElement(activitiesAnyNumber)) || 'UnknownActivity',
               version: 'anneal',
               cost: 0,
               oldcost: 0,
               fixed: typeof fixedEntry != 'undefined'
             };
 
-            randomActivityNum++;
 
             const dateStr = 'D' + format(date, 'yyyyMMdd');
-            const week = getWeek(date) - getWeek(monthStore.startDate);
-            const weekStr = 'W' + week.toString();
+            const weekNum = getWeek(date) - getWeek(monthStore.startDate);
+            const weekStr = 'W' + weekNum.toString();
 
-            if (!sol.weeks[weekStr])
-              sol.weeks[weekStr] = {
-                week,
+            if (!sol.month) {
+              sol.month = {
+                weeks: {},
+                cost: 0,
+                oldcost: 0,
+                activityCount: getZeroActivityCount(),
+              }
+            }
+
+            if (!sol.month.weeks[weekStr])
+              sol.month.weeks[weekStr] = {
+                week: weekNum,
                 cost: 0,
                 oldcost: 0,
                 dates: {},
                 activityCount: getZeroActivityCount(),
               };
-            if (!sol.weeks[weekStr].dates[dateStr])
-              sol.weeks[weekStr].dates[dateStr] = {
+
+            if (!sol.month.weeks[weekStr].dates[dateStr])
+              sol.month.weeks[weekStr].dates[dateStr] = {
                 date,
                 cost: 0,
                 oldcost: 0,
                 activityCount: getZeroActivityCount(),
               };
-            if (!sol.weeks[weekStr].dates[dateStr][time])
-              sol.weeks[weekStr].dates[dateStr][time] = {
+
+            if (!sol.month.weeks[weekStr].dates[dateStr][time])
+              sol.month.weeks[weekStr].dates[dateStr][time] = {
                 date,
                 time,
                 cost: 0,
@@ -283,7 +303,7 @@ export default defineComponent({
                 activityCount: getZeroActivityCount(),
               };
 
-            const session = sol.weeks[weekStr].dates[dateStr][time];
+            const session = sol.month.weeks[weekStr].dates[dateStr][time];
             if (!session) throw new Error('Missing session');
             else session.entries.push(entry);
           });
@@ -296,7 +316,9 @@ export default defineComponent({
       let sessionsCost = 0;
       let daysCost = 0;
       let weeksCost = 0;
-      Object.values(sol.weeks).forEach((week) => {
+      let monthCost = 0;
+      if (!sol.month) throw new Error('solution has not been initialised');
+      Object.values(sol.month.weeks).forEach((week) => {
         Object.values(week.dates).forEach((day) => {
           (['AM', 'PM'] as Array<Time>).forEach((time) => {
             const session = day[time];
@@ -315,8 +337,11 @@ export default defineComponent({
         calcWeekActivityCount(week);
         weeksCost += getWeekCost(week);
       });
-      console.log(sol, entriesCost, sessionsCost, daysCost, weeksCost);
-      const totalCost = entriesCost + sessionsCost + daysCost + weeksCost;
+      calcMonthActivityCount(sol.month);
+      monthCost = getMonthCost(sol.month);
+
+      console.log(sol, entriesCost, sessionsCost, daysCost, weeksCost, monthCost);
+      const totalCost = entriesCost + sessionsCost + daysCost + weeksCost + monthCost;
       sol.oldcost = sol.cost;
       sol.cost = totalCost;
 
@@ -347,7 +372,6 @@ export default defineComponent({
     const initAnneal = () => {
       sol.cost = 0;
       sol.oldcost = 0;
-      sol.weeks = {};
       buildRandomSolution();
       calcCost();
       calcAnnealParams();
@@ -450,12 +474,13 @@ export default defineComponent({
       return arr.length ? arr[Math.floor(Math.random() * arr.length)] : undefined;
     };
 
-    const getRandomEntry = (sol: CostMonth) => {
+    const getRandomEntry = (sol: Solution) => {
+      if (!sol.month) throw new Error('solution not initialised')
       let i = 0;
       while (i < 100) {
         i++;
 
-        const week = getRandomElement(Object.values(sol.weeks));
+        const week = getRandomElement(Object.values(sol.month.weeks));
         if (!week) continue;
         const day = getRandomElement(Object.values(week.dates));
         if (!day) continue;
@@ -468,6 +493,8 @@ export default defineComponent({
 
         if (entry)
           return {
+            oldActivity: '',
+            month: sol.month,
             week,
             day,
             session,
@@ -477,62 +504,95 @@ export default defineComponent({
       throw new Error('Unable to find random entry after 100 iterations');
     };
 
-    const swapActivity = (a: Costs, b: Costs) => {
-      a.session.activityCount[a.entry.activity] -= 1;
-      b.session.activityCount[b.entry.activity] -= 1;
-      a.day.activityCount[a.entry.activity] -= 1;
-      b.day.activityCount[b.entry.activity] -= 1;
-      a.week.activityCount[a.entry.activity] -= 1;
-      b.week.activityCount[b.entry.activity] -= 1;
-
-      const entry1activity = a.entry.activity;
-      a.entry.activity = b.entry.activity;
-      b.entry.activity = entry1activity;
-
-      a.session.activityCount[a.entry.activity] += 1;
-      b.session.activityCount[b.entry.activity] += 1;
-      a.day.activityCount[a.entry.activity] += 1;
-      b.day.activityCount[b.entry.activity] += 1;
-      a.week.activityCount[a.entry.activity] += 1;
-      b.week.activityCount[b.entry.activity] += 1;
+    const changeActivityCount = (x: Costs, activity: string, delta: number) => {
+      x.session.activityCount[activity] += delta;
+      x.day.activityCount[activity] += delta;
+      x.week.activityCount[activity] += delta;
+      x.month.activityCount[activity] += delta;
     }
 
-    const swap = (sol: CostMonth, a: Costs, b: Costs) => {
+    const swapActivity = (a: Costs, b: Costs) => {
+
+      // decrement the counts for the current activity
+      changeActivityCount(a, a.entry.activity, -1);
+      changeActivityCount(b, b.entry.activity, -1);
+
+      // save the current activity
+      a.oldActivity = a.entry.activity;
+      b.oldActivity = b.entry.activity;
+
+      // swap the activities
+      a.entry.activity = b.oldActivity;
+      b.entry.activity = a.oldActivity
+
+      // increment the counts for the new activity
+      changeActivityCount(a, a.entry.activity, 1);
+      changeActivityCount(b, b.entry.activity, 1);
+
+    }
+
+    const calcCosts = (x: Costs) => {
+      getEntryCost(x.entry);
+      getSessionCost(x.session);
+      getDayCost(x.day);
+      getWeekCost(x.week);
+      getMonthCost(x.month);
+    }
+
+    const getDeltaCosts = (x: Costs) => {
+      return getDeltaCost(x.entry) +
+        getDeltaCost(x.session) +
+        getDeltaCost(x.day) +
+        getDeltaCost(x.week) +
+        getDeltaCost(x.month);
+    }
+
+    const reverseCosts = (x: Costs) => {
+      x.month.cost = x.month.oldcost;
+      x.week.cost = x.week.oldcost;
+      x.day.cost = x.day.oldcost;
+      x.session.cost = x.session.oldcost;
+      x.entry.cost = x.entry.oldcost;
+    }
+
+    const swap = (sol: Solution, a: Costs, b: Costs) => {
       swapActivity(a, b);
 
-      getEntryCost(a.entry);
-      getEntryCost(b.entry);
-      getSessionCost(a.session);
-      getSessionCost(b.session);
-      getDayCost(a.day);
-      getDayCost(b.day);
-      getWeekCost(a.week);
-      getWeekCost(b.week);
+      calcCosts(a);
+      calcCosts(b);
 
       sol.oldcost = sol.cost;
-      sol.cost +=
-        getDeltaCost(a.entry) +
-        getDeltaCost(b.entry) +
-        getDeltaCost(a.session) +
-        getDeltaCost(b.session) +
-        getDeltaCost(a.day) +
-        getDeltaCost(b.day) +
-        getDeltaCost(a.week) +
-        getDeltaCost(b.week);
+      sol.cost += (getDeltaCosts(a) + getDeltaCosts(b));
     };
 
-    const unswap = (sol: CostMonth, a: Costs, b: Costs) => {
+    const unswap = (sol: Solution, a: Costs, b: Costs) => {
       swapActivity(a, b);
       sol.cost = sol.oldcost;
-      a.week.cost = a.week.oldcost;
-      b.week.cost = b.week.oldcost;
-      a.day.cost = a.day.oldcost;
-      b.day.cost = b.day.oldcost;
-      a.session.cost = a.session.oldcost;
-      b.session.cost = b.session.oldcost;
-      a.entry.cost = a.entry.oldcost;
-      b.entry.cost = b.entry.oldcost;
+      reverseCosts(a);
+      reverseCosts(b);
     };
+
+    const randomize = (sol: Solution, a: Costs) => {
+      changeActivityCount(a, a.entry.activity, -1);
+
+      a.oldActivity = a.entry.activity;
+      a.entry.activity = getRandomElement(shufflableActivityNames) || 'UndefinedActivity';
+
+      changeActivityCount(a, a.entry.activity, 1);
+
+      calcCosts(a);
+      sol.oldcost = sol.cost;
+      sol.cost += getDeltaCosts(a);
+    }
+
+    const undoRandomize = (sol: Solution, a: Costs) => {
+      changeActivityCount(a, a.entry.activity, -1);
+      a.entry.activity = a.oldActivity;
+      changeActivityCount(a, a.entry.activity, 1);
+
+      sol.cost = sol.oldcost;
+      reverseCosts(a);
+    }
 
     // const acceptance_probability = (
     //   old_cost: number,
@@ -570,21 +630,22 @@ export default defineComponent({
     };
 
     const getTimespanCost = (
-      timespan: CostWeek | CostDate | CostSession,
+      activityCount: CostMonth | CostWeek | CostDate | CostSession,
       ruleName: RuleName
     ) => {
       let cost = 0;
-      Object.keys(timespan.activityCount).forEach((activityName) => {
+      Object.keys(activityCount.activityCount).forEach((activityName) => {
         const rule = activityStore.getActivityRule(activityName, ruleName);
+        const count = activityCount.activityCount[activityName];
         if (rule) {
           if (Array.isArray(rule)) {
-            if (timespan.activityCount[activityName] < rule[0])
-              cost = cost + 1;
-            if (timespan.activityCount[activityName] > rule[1])
-              cost = cost + 1;
+            if (count < rule[0]) // count is less than minimum
+              cost = cost + rule[0] - count;
+            if (count > rule[1])
+              cost = cost + count - rule[1];
           } else {
-            if (timespan.activityCount[activityName] != rule)
-              cost = cost + 1;
+            if (count != rule)
+              cost = cost + Math.abs(count - rule);
           }
         }
       });
@@ -630,6 +691,18 @@ export default defineComponent({
       return week.cost;
     };
 
+    const calcMonthActivityCount = (month: CostMonth) => {
+      month.activityCount = sumObjectsByKey(
+        Object.values(month.weeks).map((week) => week.activityCount)
+      );
+    }
+
+    const getMonthCost = (month: CostMonth) => {
+      month.oldcost = month.cost;
+      month.cost = getTimespanCost(month, 'perMonth');
+      return month.cost;
+    }
+
     const sumObjectsByKey = (objs: Record<string, number>[]) => {
       return objs.reduce((a, b) => {
         for (const k in b) {
@@ -640,7 +713,9 @@ export default defineComponent({
     };
 
     const exportAnneal = () => {
-      Object.values(sol.weeks).forEach(week => {
+      rosterStore.delTempAnnealSolution();
+      if (!sol.month) throw new Error('Solution Not initiailised')
+      Object.values(sol.month.weeks).forEach(week => {
         Object.values(week.dates).forEach(date => {
           let entries = Array<CostEntry>();
           if (date.AM) entries = entries.concat(date.AM.entries);
@@ -656,7 +731,8 @@ export default defineComponent({
             })
           })
         })
-      })
+      });
+      emit('export')
     }
 
     return {

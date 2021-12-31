@@ -257,5 +257,13 @@ export const useRosterStore = defineStore('roster', {
         })
       );
     },
+
+    delTempAnnealSolution() {
+      this.$patch((state) => {
+        state.allEntries = state.allEntries.filter(
+          (entry) => entry.version != 'anneal_solution'
+        );
+      });
+    },
   },
 });

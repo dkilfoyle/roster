@@ -148,17 +148,22 @@ export interface CostWeek extends Cost {
 }
 
 export interface CostMonth extends Cost {
-  cost: number;
-  oldcost: number;
   weeks: Record<string, CostWeek>;
+  activityCount: Record<string, number>;
 }
 
-export type Costs = {
+export interface Costs {
+  oldActivity: string;
+  month: CostMonth;
   week: CostWeek;
   day: CostDate;
   session: CostSession;
   entry: CostEntry;
-};
+}
+
+export interface Solution extends Cost {
+  month?: CostMonth;
+}
 
 export interface AnnealParams {
   TMax: number;

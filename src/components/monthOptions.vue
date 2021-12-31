@@ -167,7 +167,10 @@
       label="Anneal"
     ></q-btn>
     <q-dialog v-model="anneal">
-      <anneal-graph @cancel="anneal = false"></anneal-graph>
+      <anneal-graph
+        @cancel="anneal = false"
+        @export="anneal = false; monthStore.version = 'anneal_solution';"
+      ></anneal-graph>
     </q-dialog>
     <q-btn color="primary" @click="exportXLS" icon="file_download" label="Export Excel"></q-btn>
     <!-- <q-btn color="primary" @click="store.doDeleteNCT" icon="file_download" label="Delete NCT"></q-btn> -->

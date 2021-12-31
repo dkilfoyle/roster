@@ -293,7 +293,7 @@ export const useStore = defineStore('main', {
         }
         if (foundTimeMatches > minMax[1]) {
           result.reasons.push(
-            `PerDay: expected <= ${minMax[1]}, found ${foundTimeMatches}`
+            `PerSession: expected <= ${minMax[1]}, found ${foundTimeMatches}`
           );
         }
       }
